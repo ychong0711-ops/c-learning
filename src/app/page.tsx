@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -43,39 +44,87 @@ export default async function DashboardPage() {
     );
   }
 
-  const [progressRows, agg, recentAttempts] = await Promise.all([
-    db
+let progressRows, agg, recentAttempts;
+  let hasError = false;
+  let errorMessage: string | null = null;
+
+  try {
+    progressRows = await db
       .select()
       .from(lessonProgress)
-      .where(and(eq(lessonProgress.learnerId, learner.id), eq(lessonProgress.completed, true))),
-    db
+      .where(and(eq(lessonProgress.learnerId, learner.id), eq(lessonProgress.completed, true)));
+    agg = await db
       .select({
         total: sql<number>`(count(*))::int`,
         correct: sql<number>`(count(*) filter (where ${quizAttempts.isCorrect}))::int`,
       })
       .from(quizAttempts)
-      .where(eq(quizAttempts.learnerId, learner.id)),
-    db
+      .where(eq(quizAttempts.learnerId, learner.id));
+    recentAttempts = await db
       .select()
       .from(quizAttempts)
       .where(eq(quizAttempts.learnerId, learner.id))
       .orderBy(desc(quizAttempts.id))
-      .limit(6),
-  ]);
+      .limit(6);
+  } catch (e) {
+    hasError = true;
+    errorMessage = e instanceof Error ? e.message : "학습 데이터를 불러오는 중 오류가 발생했습니다.";
+  }
 
-  const completedIds = new Set(progressRows.map((p) => p.lessonId));
+  try {
+    progressRows = await db
+      .select()
+      .from(lessonProgress)
+      .where(and(eq(lessonProgress.learnerId, learner.id), eq(lessonProgress.completed, true)));
+    agg = await db
+      .select({
+        total: sql<number>`(count(*))::int`,
+        correct: sql<number>`(count(*) filter (where ${quizAttempts.isCorrect}))::int`,
+      })
+      .from(quizAttempts)
+      .where(eq(quizAttempts.learnerId, learner.id));
+    recentAttempts = await db
+      .select()
+      .from(quizAttempts)
+      .where(eq(quizAttempts.learnerId, learner.id))
+      .orderBy(desc(quizAttempts.id))
+      .limit(6);
+  } catch (e) {
+    hasError = true;
+    errorMessage = e instanceof Error ? e.message : "학습 데이터를 불러오는 중 오류가 발생했습니다.";
+  }
+
+  if (hasError) {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <ProgressRing percent={0} size={72} stroke={7} sub="오류" color="var(--color-alarm)" />
+        <div className="mt-6 text-center">
+          <p className="font-semibold text-alarm mb-4">데이터 로딩 오류</p>
+          <p className="text-mute">{errorMessage}</p>
+          <div className="mt-6">
+            <Link href="/" className="rounded-lg bg-signal px-4 py-2.5 text-sm font-semibold text-canvas transition-all hover:brightness-110">
+              대시보드로 돌아가기
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const completedIds = new Set(progressRows!.map((p) => p.lessonId));
   const completedCount = completedIds.size;
   const totalCount = LESSONS.length;
   const completionPct = totalCount === 0 ? 0 : (completedCount / totalCount) * 100;
 
-  const total = agg[0]?.total ?? 0;
-  const correct = agg[0]?.correct ?? 0;
+  const total = agg![0]?.total ?? 0;
+  const correct = agg![0]?.correct ?? 0;
   const accuracy = total === 0 ? 0 : Math.round((correct / total) * 100);
 
   const upcoming = orderedLessons().filter((l) => !completedIds.has(l.id)).slice(0, 3);
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <Suspense fallback={<ProgressRing percent={0} size={72} stroke={7} sub="강의" />}>
+      <div className="mx-auto max-w-5xl">
       {/* 헤더 */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -248,7 +297,7 @@ export default async function DashboardPage() {
             최근 퀴즈 기록
           </h2>
           <div className="mt-3 rounded-lg border border-line bg-panel">
-            {recentAttempts.length === 0 ? (
+            {recentAttempts!.length === 0 ? (
               <div className="p-5 text-sm text-mute">
                 아직 푼 문제가 없습니다.{" "}
                 <Link href="/quiz" className="text-signal underline-offset-2 hover:underline">
@@ -258,7 +307,7 @@ export default async function DashboardPage() {
               </div>
             ) : (
               <ul className="divide-y divide-line">
-                {recentAttempts.map((a) => {
+                {recentAttempts!.map((a) => {
                   const q = questionById(a.questionId);
                   return (
                     <li key={a.id} className="flex items-start gap-3 p-3.5">
@@ -302,5 +351,6 @@ export default async function DashboardPage() {
         </section>
       </div>
     </div>
+    </Suspense>
   );
 }

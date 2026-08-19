@@ -4,28 +4,52 @@ import { tmpdir } from "os";
 import path from "path";
 
 export type RunRequest = {
+  /** 실행할 소스 코드 (최대 64,000자) */
   code: string;
+  /** stdin 입력 (최대 16,000자) */
   stdin?: string;
+  /** 사용할 표준 (c99, c11, c17, gnu11, gnu17 기본값: c11) */
   std?: string;
+  /** 최적화 레벨 (-O0, -O1, -O2, -Os 기본값: -O0) */
   opt?: string;
+  /** 추가 컴파일 옵션 */
   wallExtra?: boolean;
+  /** 와 에러 시 컴파일 에러를 치명적으로 처리 (-Werror) */
   werror?: boolean;
 };
 
 export type RunResult = {
+  /** 전체 성공 여부 */
   ok: boolean;
+  /** 실행 단계 ("compile" 또는 "run") */
   stage: "compile" | "run";
+  /** 종료 코드 (성공 시 null) */
   exitCode: number | null;
+  /** 타임아웃 발생 여부 */
   timedOut: boolean;
+  /** 진단 메시지 (컴파일 경고/에러 등) */
   diagnostics: string;
+  /** 프로그램 표준 출력 */
   stdout: string;
+  /** 프로그램 표준 에러 */
   stderr: string;
+  /** 소요 시간 (ms) */
   timeMs: number;
+  /** 컴파일 에러 개수 */
   errors: number;
+  /** 컴파일 경고 개수 */
   warnings: number;
+  /** 사용된 컴파일 명령어 */
   compileCommand: string;
 };
 
+/**
+ * 제출된 C 코드를 컴파일하고 실행합니다.
+ * 안전한 디렉토리에서 자식 프로세스를 생성해 컴파일 후 실행하며,
+ * 메모리/CPU 타임아웃 및 출력 크기 제한을 적용합니다.
+ * @param req 컴파일 및 실행 요청 정보
+ * @returns 컴파일/실행 결과 (성공/실패 정보 포함)
+ */
 const MAX_CODE = 64_000;
 const MAX_STDIN = 16_000;
 const MAX_OUTPUT = 48_000;
@@ -89,6 +113,13 @@ function runCommand(
   });
 }
 
+/**
+ * 제출된 C 코드를 컴파일하고 실행합니다.
+ * 안전한 디렉토리에서 자식 프로세스를 생성해 컴파일 후 실행하며,
+ * 메모리/CPU 타임아웃 및 출력 크기 제한을 적용합니다.
+ * @param req 컴파일 및 실행 요청 정보
+ * @returns 컴파일/실행 결과 (성공/실패 정보 포함)
+ */
 export async function compileAndRun(req: RunRequest): Promise<RunResult> {
   const code = typeof req.code === "string" ? req.code : "";
   if (code.length === 0) {
