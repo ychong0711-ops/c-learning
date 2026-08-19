@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans KR", "Space Grotesk", system-ui, sans-serif;
+  --font-display: "Space Grotesk", "IBM Plex Sans KR", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-canvas: #12151b;
+  --color-panel: #181c23;
+  --color-raise: #1f242d;
+  --color-line: #2a3038;
+  --color-edge: #3d4551;
+  --color-ink: #e9ebe4;
+  --color-mute: #98a1ac;
+  --color-dim: #6b7480;
+  --color-signal: #f0a13a;
+  --color-pine: #58c07d;
+  --color-alarm: #e0605e;
+  --color-aqua: #45b8ad;
+  --color-code: #0d1016;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  background-image:
+    linear-gradient(rgba(233, 235, 228, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(233, 235, 228, 0.022) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+::selection {
+  background: rgba(240, 161, 58, 0.35);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-edge) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-edge);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* C 코드 하이라이트 토큰 */
+.tok-cmt { color: #6b7684; font-style: italic; }
+.tok-str { color: #a8c07a; }
+.tok-pp { color: #d98b6c; }
+.tok-type { color: #45b8ad; }
+.tok-kw { color: #f0a13a; }
+.tok-num { color: #d4b26a; }
+.tok-fn { color: #e0c285; }
