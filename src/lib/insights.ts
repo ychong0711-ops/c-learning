@@ -1,8 +1,9 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { lessonProgress, quizAttempts } from "@/db/schema";
+import { lessonProgress, practiceProgress, quizAttempts } from "@/db/schema";
 import { TRACKS, LESSONS } from "@/data/course";
 import { questionById } from "@/data/questions";
+import { PRACTICES, PRACTICE_TOPICS } from "@/data/practice";
 
 /**
  * 취약 주제 분석 결과
@@ -172,6 +173,41 @@ export function buildReminder(lastActivity: Date | null): {
   return {
     tone: "good",
     message: "오늘도 학습 중이네요. 꾸준함이 실력입니다!",
+  };
+}
+
+/**
+ * 학습자의 실습 통계를 반환합니다.
+ */
+export async function getPracticeStats(learnerId: number): Promise<{
+  completed: number;
+  total: number;
+  byTopic: Record<string, number>;
+}> {
+  const completedRows = await db
+    .select({ practiceId: practiceProgress.practiceId })
+    .from(practiceProgress)
+    .where(and(eq(practiceProgress.learnerId, learnerId), eq(practiceProgress.completed, true)));
+
+  const completedIds = new Set(completedRows.map((r) => r.practiceId));
+  const byTopic: Record<string, number> = {};
+
+  // 초기화
+  for (const topic of PRACTICE_TOPICS) {
+    byTopic[topic] = 0;
+  }
+
+  // 집계
+  for (const practice of PRACTICES) {
+    if (completedIds.has(practice.id)) {
+      byTopic[practice.topic] = (byTopic[practice.topic] || 0) + 1;
+    }
+  }
+
+  return {
+    completed: completedIds.size,
+    total: PRACTICES.length,
+    byTopic,
   };
 }
 

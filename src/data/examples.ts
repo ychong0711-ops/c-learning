@@ -7,6 +7,8 @@ export type Example = {
   description: string;
   code: string;
   stdin?: string;
+  expectedOutput?: string;
+  keyPoints?: string[];
 };
 
 export const EXAMPLE_LEVELS: ExampleLevel[] = ["초급", "중급", "고급"];
@@ -40,6 +42,12 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "EMBED:C LAB - Hello ECU!\nsizeof(int)      = 4 bytes\nsizeof(uint8_t)  = 1 bytes\nsizeof(uint32_t) = 4 bytes",
+    keyPoints: [
+      "printf로 표준 출력에 문자열과 숫자 출력",
+      "sizeof 연산자로 타입 크기 확인 (컴파일 타임 상수)",
+      "stdint.h의 고정 폭 정수 타입(uint8_t, uint32_t) 사용"
+    ],
   },
   {
     id: "bits",
@@ -71,6 +79,12 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "초기값              0x00000000\nLED_PIN SET        0x00000008\nbit5 SET           0x00000028\nLED_PIN CLEAR      0x00000020\nbit5 TOGGLE        0x00000000",
+    keyPoints: [
+      "비트 연산자: | (OR) SET, &~ (AND-NOT) CLEAR, ^ (XOR) TOGGLE",
+      "1u << n으로 n번째 비트 마스크 생성 (unsigned 리터럴 중요)",
+      "레지스터 조작의 표준 관용구: 읽기-수정-쓰기 패턴"
+    ],
   },
   {
     id: "pointers",
@@ -99,8 +113,14 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "p의 주소        : <address>\np+1의 주소      : <address> (4바이트 전진)\n*p              : 20\n*(p+1)          : 30\n\nbuffer[0] = 0 == *(buffer + 0)\nbuffer[1] = 10 == *(buffer + 1)\nbuffer[2] = 20 == *(buffer + 2)\nbuffer[3] = 30 == *(buffer + 3)\nbuffer[4] = 40 == *(buffer + 4)\nbuffer[5] = 50 == *(buffer + 5)\nbuffer[6] = 60 == *(buffer + 6)\nbuffer[7] = 70 == *(buffer + 7)",
+    keyPoints: [
+      "포인터 산술: p+1은 sizeof(*p) 바이트 전진 (여기서는 4바이트)",
+      "배열 인덱싱 arr[i]는 *(arr+i)와 완전히 동일",
+      "%p로 주소 출력 시 (void*) 캐스팅 필수"
+    ],
   },
-  {
+{
     id: "can",
     title: "04 · CAN 프레임 파싱",
     level: "중급",
@@ -134,8 +154,15 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "RPM raw = 2500\nRPM     = 625 rpm (factor 0.25)\n과열 플래그 = 1 (경고!)",
+    keyPoints: [
+      "구조체로 CAN 프레임(ID, DLC, 데이터) 모델링",
+      "빅엔디언 16비트: (data[0] << 8) | data[1]",
+      "비트 마스크 & 연산으로 플래그 추출",
+      "CAN 신호 파싱의 기본 패턴"
+    ],
   },
-  {
+{
     id: "fsm",
     title: "05 · 상태 머신 (신호등)",
     level: "고급",
@@ -173,8 +200,15 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "tick 0: 빨강(정지)\ntick 1: 초록(진행)\ntick 2: 노랑(준비)\ntick 3: 빨강(정지)\ntick 4: 초록(진행)\ntick 5: 노랑(준비)\ntick 6: 빨강(정지)",
+    keyPoints: [
+      "enum으로 상태와 이벤트 정의",
+      "State_Next: (현재상태, 이벤트) → 다음상태 결정 함수",
+      "스위치문으로 전이 테이블 구현",
+      "자동차 ECU 상태 관리(시동, 주행, 정지 등)의 기초"
+    ],
   },
-  {
+{
     id: "callback",
     title: "06 · 함수 포인터 콜백",
     level: "고급",
@@ -220,8 +254,14 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "이벤트 루프 시작\n[콜백] 버튼 이벤트, data=0x01\n[콜백] CAN 수신, data=0xA5\n이벤트 루프 종료",
+    keyPoints: [
+      "함수 포인터로 콜백 등록",
+      "Event_Dispatch: handlers[ev](data) 호출로 이벤트 전파",
+      "미등록 이벤트(3u 등)는 무시됨"
+    ],
   },
-  {
+{
     id: "warnings",
     title: "07 · 경고 사냥 (일부러 버그 심기)",
     level: "중급",
@@ -249,8 +289,14 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "warning: unused_variable is unused\nwarning: assignment inside if condition\nwarning: comparison is always true\nwarning: array subscript 4 is outside array bounds\n위험한 접근 이후에도 프로그램은 멀쩡해 보입니다.",
+    keyPoints: [
+      "괄호 없는 매크로가 식을 망가뜨리는 경우 확인",
+      "비교 연산자 '=' 대신 '==' 사용",
+      "사용되지 않은 변수와 배열 범위 초과(UB) 경고 확인"
+    ],
   },
-  {
+{
     id: "ring",
     title: "08 · 링 버퍼 (UART 수신)",
     level: "중급",
@@ -302,8 +348,14 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "수신: AUTOSAR\n",
+    keyPoints: [
+      "head(쓰기)/tail(읽기) 인덱스와 모듈로 연산",
+      "count 기반 full/empty 판정으로 head==tail 모호성 제거",
+      "ISR 생산자·태스크 소비자 패턴의 기초"
+    ],
   },
-  {
+{
     id: "perf",
     title: "09 · 최적화 실험 (-O0 vs -O2)",
     level: "고급",
@@ -330,6 +382,12 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "누적값   : 249999997500000000\n소요 시간: 123.4 ms\n-> 오른쪽 옵션에서 -O0 / -O2를 바꿔 실행해 보세요.",
+    keyPoints: [
+      "clock()로 소요 시간 측정",
+      "-O0과 -O2 최적화 옵션에 따른 실행 시간 차이 관찰",
+      "컴파일러 최적화가 연산 횟수와 소요 시간에 미치는 영향"
+    ],
   },
   {
     id: "stdin",
@@ -356,6 +414,13 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "현재 속도(km/h)를 입력하세요: 안전 속도입니다.",
+    keyPoints: [
+      "scanf 반환값으로 입력 성공/실패 판별",
+      "stdin 칸에 입력값 적으면 자동 주입",
+      "버퍼 비우기: scanf(\"%*[^\\n]%*c\") 등으로 잘못된 입력 처리",
+      "자동차 ECU 진단 콘솔 구현의 기초"
+    ],
   },
   {
     id: "switch-gear",
@@ -383,6 +448,12 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "P -> 주차 (Park)\nR -> 후진 (Reverse)\nN -> 중립 (Neutral)\nD -> 주행 (Drive)\n",
+    keyPoints: [
+      "switch 문으로 기어 코드 해석",
+      "default 케이스로 예기치 않은 입력 처리",
+      "문자 상수('P')로 가독성 확보"
+    ],
   },
   {
     id: "avg",
@@ -411,6 +482,12 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "합계      : 4104\n정수 평균 : 513 (소수 버림)\n실수 평균 : 513.000\n",
+    keyPoints: [
+      "정수 나눗셈은 소수점을 버리고 정수만 반환",
+      "실수 나눗셈은 소수점 이하까지 표현",
+      "배열 원소의 합과 평균 계산 방법 비교"
+    ],
   },
   {
     id: "functions",
@@ -442,6 +519,12 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "ADC raw : 512\n전압    : 411 mV\n온도    : 41 degC\n",
+    keyPoints: [
+      "ADC raw 값을 전압(mV)으로 변환",
+      "전압을 온도(degC)로 변환",
+      "작은 함수로 모듈화해 재사용성 확보"
+    ],
   },
   {
     id: "macro",
@@ -466,6 +549,12 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "SQUARE_BAD(3 + 1)  = 7\nSQUARE_GOOD(3 + 1) = 9\nv는 이제 10 (두 번 증가됨, 경고 확인)\n",
+    keyPoints: [
+      "괄호 없는 매크로는 우선순위 문제로 의도치 않은 결과 발생",
+      "매크로 인자를 두 번 쓰면 부작용이 두 번 발생",
+      "안전 매크로는 ((x) * (x)) 형태로 괄호 감싸기"
+    ],
   },
   {
     id: "endian",
@@ -497,6 +586,12 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "u.word       = 0x11223344\n메모리 배치  : %02X %02X %02X %02X\n-> 리틀 엔디언 (ARM, x86 대부분)\\n",
+    keyPoints: [
+      "union 멤버 접근으로 메모리 레이아웃 관찰",
+      "포인터 캐스팅으로 최하위 바이트 검사",
+      "swap16/swap32: 시프트와 마스크로 바이트 재배열"
+    ],
   },
   {
     id: "nmea",
@@ -529,6 +624,12 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "원문: $GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A\n\nfield[ 0] = $GPRMC   <- 문장 식별자\nfield[ 1] = 123519   <- UTC 시각\nfield[ 2] = 4807.038,N\nfield[ 3] = N\nfield[ 4] = 01131.000,E\nfield[ 5] = 022.4\nfield[ 6] = 084.4\nfield[ 7] = 230394,003.1,W*6A\n\n파싱 완료: 총 8 필드\n",
+    keyPoints: [
+      "strtok으로 NMEA 문장 필드 분리",
+      "field[0]: 문장 식별자, field[1]: UTC 시각, field[7]: 속도 (노트)",
+      "텍스트 프로토콜 파싱의 기본 패턴"
+    ],
   },
   {
     id: "bitfield",
@@ -562,6 +663,12 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "engine_on=1 door_open=1 belt_off=0\nsizeof(StatusFlags_t) = 1 byte\n\n-> 경고: 시동 상태에서 도어가 열렸습니다!\n",
+    keyPoints: [
+      "구조체 비트 필드로 1바이트에 플래그 압축",
+      "engine_on, door_open, belt_off, lamp_err, reserved 비트 필드 정의",
+      "MISRA: 비트 필드 사용 시 포터빌리티 및 예측성 주의"
+    ],
   },
   {
     id: "dtc",
@@ -606,6 +713,12 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "[P0300] 랜덤/다중 실린더 미스파이어\n[C1201] ABS 통신 오류\n진단 코드 보고 완료.\n",
+    keyPoints: [
+      "DTC(진단 코드)를 열거형 + 조회 테이블로 관리",
+      "활성 코드 순회하며 이름/설명 출력",
+      "자동차 SW 진단에서 상태/코드 관리 패턴"
+    ],
   },
   {
     id: "crc8",
@@ -647,6 +760,12 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "메시지 : 0x12 0x34 0x56 0x78\nCRC-8  : 0x??\n\n에러 주입 후 CRC-8 = 0x?? (값이 바뀌면 검출 성공)\n",
+    keyPoints: [
+      "CRC-8 (다항식 0x07, 초기값 0x00) 비트 단위 구현",
+      "1비트 에러 주입으로 체크섬 변화 검출",
+      "차량 네트워크에서 흔한 CRC-8 설정 사용"
+    ],
   },
   {
     id: "mavg",
@@ -694,6 +813,12 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "in= 500 -> avg= 500\nin= 520 -> avg= 510\nin= 490 -> avg= 500\nin= 510 -> avg= 500\nin= 900 -> avg= 600   <- 스파이크!\nin= 505 -> avg= 525\nin= 495 -> avg= 510\nin= 515 -> avg= 513\n",
+    keyPoints: [
+      "O(1) 링 구조로 이동 평균 계산",
+      "가장 오래된 값(buf[idx]) 제거 후 새 값 삽입",
+      "스파이크(900) 평균에 미치는 영향 관찰"
+    ],
   },
   {
     id: "scheduler",
@@ -741,6 +866,12 @@ int main(void) {
     return 0;
 }
 `,
+    expectedOutput: "tick 0\n    [0] 센서 읽기\ntick 1\ntick 2\n    [2] 제어 연산\ntick 3\n    [3] 센서 읽기\ntick 4\n    [4] 제어 연산\ntick 5\ntick 6\n    [6] 제어 연산\ntick 7\n",
+    keyPoints: [
+      "함수 포인터 테이블로 태스크 실행",
+      "period에 따라 tick마다 다른 태스크 디스패치",
+      "AUTOSAR OS 개념의 축소판: tick 단위 주기 실행"
+    ],
   },
   {
     id: "console",

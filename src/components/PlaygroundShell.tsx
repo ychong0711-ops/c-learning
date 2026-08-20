@@ -9,6 +9,11 @@ import {
   LEVEL_COLOR,
   LEVEL_HINT,
 } from "@/data/examples";
+import {
+  PRACTICES,
+  PRACTICE_TOPICS,
+  TOPIC_COLOR,
+} from "@/data/practice";
 
 type RunResult = {
   ok: boolean;
@@ -22,6 +27,7 @@ type RunResult = {
   errors: number;
   warnings: number;
   compileCommand: string;
+  expectedOutput?: string;
 };
 
 type Snippet = {
@@ -146,11 +152,22 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
       const res = await fetch("/api/playground/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, stdin, std, opt, werror }),
+        body: JSON.stringify({ code, stdin, std, opt, werror, exampleId: loadedExample }),
       });
       if (!res.ok) throw new Error("HTTP " + res.status);
-      const data = (await res.json()) as RunResult;
+      const data = (await res.json()) as RunResult & { expectedOutput?: string };
       setResult(data);
+      // Practice completion tracking: if PASS and has profile, record completion
+      if (data.stage === "run" && data.ok && data.stdout && hasProfile) {
+        const loadedPrac = PRACTICES.find((p) => p.id === loadedExample);
+        if (loadedPrac) {
+          await fetch("/api/practice/complete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ practiceId: loadedPrac.id }),
+          });
+        }
+      }
       requestAnimationFrame(() => {
         outputRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       });
@@ -208,7 +225,16 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
   const loadExample = (id: string) => {
     setLoadedExample(id);
     const ex = EXAMPLES.find((e) => e.id === id);
-    if (!ex) return;
+    if (!ex) {
+      const p = PRACTICES.find((p) => p.id === id);
+      if (!p) return;
+      setCode(p.code);
+      setStdin(p.stdin ?? "");
+      setSnippetName(p.title.replace(/^\d+\s·\s/, ""));
+      setActiveSnippetId(null);
+      setResult(null);
+      return;
+    }
     setCode(ex.code);
     setStdin(ex.stdin ?? "");
     setSnippetName(ex.title.replace(/^\d+\s·\s/, ""));
@@ -242,6 +268,13 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
                 </optgroup>
               );
             })}
+            <optgroup key="auto" label="자동차 심화 (18)">
+              {PRACTICES.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </optgroup>
           </select>
           <select
             value={std}
@@ -350,9 +383,25 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
                     경고 {result.warnings}
                   </span>
                 ) : null}
+                {result.warnings > 0 ? (
+                  <span className="rounded bg-signal/15 px-1.5 py-px font-mono text-[10px] text-signal">
+                    경고 {result.warnings}
+                  </span>
+                ) : null}
                 {result.errors > 0 ? (
                   <span className="rounded bg-alarm/15 px-1.5 py-px font-mono text-[10px] text-alarm">
                     에러 {result.errors}
+                  </span>
+                ) : null}
+                {result.expectedOutput ? (
+                  <span
+                    className={
+                      result.stdout?.trim() === result.expectedOutput.trim()
+                        ? "rounded bg-pine/15 px-1.5 py-px font-mono text-[10px] text-pine"
+                        : "rounded bg-alarm/15 px-1.5 py-px font-mono text-[10px] text-alarm"
+                    }
+                  >
+                    {result.stdout?.trim() === result.expectedOutput.trim() ? "✓ PASS" : "✗ FAIL"}
                   </span>
                 ) : null}
               </div>
@@ -523,7 +572,36 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
         {loadedExample ? (
           (() => {
             const ex = EXAMPLES.find((e) => e.id === loadedExample);
-            if (!ex) return null;
+            if (!ex) {
+              const p = PRACTICES.find((p) => p.id === loadedExample);
+              if (!p) return null;
+              const color = TOPIC_COLOR[p.topic];
+              return (
+                <div className="rounded-lg border border-aqua/30 bg-aqua/5 p-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-aqua">
+                      예제 가이드
+                    </span>
+                    <span
+                      className="rounded px-1.5 py-px text-[10px] font-semibold"
+                      style={{ color, border: `1px solid ${color}55` }}
+                    >
+                      {p.topic}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-xs leading-relaxed text-mute">
+                    {p.description}
+                  </p>
+                  <p className="mt-2 border-t border-aqua/20 pt-2 text-[11px] leading-relaxed text-dim">
+                    {p.keyPoints?.map((kp) => (
+                      <span key={kp} className="rounded px-1 py-0.5 text-[9px] text-dim">
+                        {kp}
+                      </span>
+                    )) ?? ""}
+                  </p>
+                </div>
+              );
+            }
             const color = LEVEL_COLOR[ex.level];
             return (
               <div className="rounded-lg border border-aqua/30 bg-aqua/5 p-3.5">
@@ -542,7 +620,11 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
                   {ex.description}
                 </p>
                 <p className="mt-2 border-t border-aqua/20 pt-2 text-[11px] leading-relaxed text-dim">
-                  {LEVEL_HINT[ex.level]}
+                  {ex.keyPoints?.map((kp) => (
+                    <span key={kp} className="rounded px-1 py-0.5 text-[9px] text-dim">
+                      {kp}
+                    </span>
+                  )) ?? ""}
                 </p>
               </div>
             );

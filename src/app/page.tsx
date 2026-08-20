@@ -10,11 +10,13 @@ import {
   buildReminder,
   formatElapsed,
   getLastActivity,
+  getPracticeStats,
   getWeakTracks,
   REMINDER_COLOR,
 } from "@/lib/insights";
 import Onboarding from "@/components/Onboarding";
 import ProgressRing from "@/components/ProgressRing";
+import { TOPIC_COLOR } from "@/data/practice";
 
 export default async function DashboardPage() {
   const learner = await getLearner().catch(() => null);
@@ -54,6 +56,7 @@ export default async function DashboardPage() {
 let progressRows, agg, recentAttempts;
   let weakTracks: Awaited<ReturnType<typeof getWeakTracks>> = [];
   let lastActivity: Date | null = null;
+  let practiceStats: Awaited<ReturnType<typeof getPracticeStats>> | null = null;
   let hasError = false;
   let errorMessage: string | null = null;
 
@@ -75,9 +78,10 @@ let progressRows, agg, recentAttempts;
       .where(eq(quizAttempts.learnerId, learner.id))
       .orderBy(desc(quizAttempts.id))
       .limit(6);
-    [weakTracks, lastActivity] = await Promise.all([
+    [weakTracks, lastActivity, practiceStats] = await Promise.all([
       getWeakTracks(learner.id),
       getLastActivity(learner.id),
+      getPracticeStats(learner.id),
     ]);
   } catch (e) {
     hasError = true;
@@ -109,6 +113,11 @@ let progressRows, agg, recentAttempts;
   const total = agg![0]?.total ?? 0;
   const correct = agg![0]?.correct ?? 0;
   const accuracy = total === 0 ? 0 : Math.round((correct / total) * 100);
+
+  const practicePct =
+    !practiceStats || practiceStats.total === 0
+      ? 0
+      : (practiceStats.completed / practiceStats.total) * 100;
 
   const upcoming = orderedLessons().filter((l) => !completedIds.has(l.id)).slice(0, 3);
 
@@ -204,6 +213,41 @@ let progressRows, agg, recentAttempts;
           <div>
             <div className="font-display text-xl font-bold">{accuracy}%</div>
             <div className="text-xs text-mute">퀴즈 정답률</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 rounded-xl border border-line bg-panel p-4">
+          <ProgressRing
+            percent={practicePct}
+            size={72}
+            stroke={7}
+            color="var(--color-signal)"
+            sub="실습"
+          />
+          <div>
+            <div className="font-display text-xl font-bold">
+              {practiceStats?.completed ?? 0}
+              <span className="text-sm font-medium text-dim">
+                {" "}
+                / {practiceStats?.total ?? 0}
+              </span>
+            </div>
+            <div className="text-xs text-mute">실습 완료</div>
+            {practiceStats && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {Object.entries(practiceStats.byTopic)
+                  .filter(([_, count]) => count > 0)
+                  .slice(0, 3)
+                  .map(([topic, count]) => (
+                    <span
+                      key={topic}
+                      className="rounded px-1 py-0.5 font-mono text-[9px] font-bold text-canvas"
+                      style={{ backgroundColor: TOPIC_COLOR[topic as keyof typeof TOPIC_COLOR] }}
+                    >
+                      {topic}
+                    </span>
+                  ))}
+              </div>
+            )}
           </div>
         </div>
         <div className="rounded-xl border border-line bg-panel p-4">

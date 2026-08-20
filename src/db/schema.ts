@@ -33,6 +33,23 @@ export const lessonProgress = pgTable(
   ]
 );
 
+export const practiceProgress = pgTable(
+  "practice_progress",
+  {
+    id: serial("id").primaryKey(),
+    learnerId: integer("learner_id")
+      .notNull()
+      .references(() => learners.id, { onDelete: "cascade" }),
+    practiceId: text("practice_id").notNull(),
+    completed: boolean("completed").notNull().default(false),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("uq_practice_progress_learner_practice").on(t.learnerId, t.practiceId),
+    index("ix_practice_progress_learner").on(t.learnerId),
+  ]
+);
+
 export const snippets = pgTable(
   "snippets",
   {

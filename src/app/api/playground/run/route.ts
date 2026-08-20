@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { compileAndRun } from "@/lib/crunner";
+import { EXAMPLES } from "@/data/examples";
+import { PRACTICES } from "@/data/practice";
 
 export const maxDuration = 30;
 
@@ -11,6 +13,7 @@ export async function POST(req: NextRequest) {
     opt?: unknown;
     wallExtra?: unknown;
     werror?: unknown;
+    exampleId?: unknown;
   };
 
   if (typeof body.code !== "string") {
@@ -26,5 +29,16 @@ export async function POST(req: NextRequest) {
     werror: body.werror === true,
   });
 
-  return NextResponse.json(result);
+  // If exampleId provided, attach expectedOutput from the example/practice
+  let expectedOutput: string | undefined;
+  if (typeof body.exampleId === "string") {
+    const ex = EXAMPLES.find((e) => e.id === body.exampleId);
+    if (ex?.expectedOutput) expectedOutput = ex.expectedOutput;
+    else {
+      const p = PRACTICES.find((p) => p.id === body.exampleId);
+      if (p?.expectedOutput) expectedOutput = p.expectedOutput;
+    }
+  }
+
+  return NextResponse.json({ ...result, expectedOutput });
 }
