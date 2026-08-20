@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-screen bg-canvas text-ink">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>C Learning Platform - 사용자 가이드</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  />
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --color-canvas: #12151b;
+      --color-panel: #181c23;
+      --color-raise: #1f242d;
+      --color-line: #2a3038;
+      --color-edge: #3d4551;
+      --color-ink: #e9ebe4;
+      --color-mute: #98a1ac;
+      --color-dim: #6b7480;
+      --color-signal: #f0a13a;
+      --color-pine: #58c07d;
+      --color-alarm: #e0605e;
+      --color-aqua: #45b8ad;
+      --color-code: #0d1016;
+    }
+
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-edge) transparent;
+    }
+
+    *::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    *::-webkit-scrollbar-thumb {
+      background: var(--color-edge);
+      border-radius: 8px;
+    }
+
+    *::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    html {
+      color-scheme: dark;
+    }
+
+    body {
+      background-color: var(--color-canvas);
+      color: var(--color-ink);
+      background-image:
+        linear-gradient(rgba(233, 235, 228, 0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(233, 235, 228, 0.022) 1px, transparent 1px);
+      background-size: 34px 34px;
+    }
+
+    ::selection {
+      background: rgba(240, 161, 58, 0.35);
+    }
+
+    .font-display {
+      font-family: "Space Grotesk", "IBM Plex Sans KR", system-ui, sans-serif;
+    }
+
+    .font-sans {
+      font-family: "IBM Plex Sans KR", "Space Grotesk", system-ui, sans-serif;
+    }
+
+    .font-mono {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .bg-code {
+      background-color: var(--color-code);
+    }
+
+    .border-line {
+      border-color: var(--color-line);
+    }
+
+    .border-edge {
+      border-color: var(--color-edge);
+    }
+
+    .text-dim {
+      color: var(--color-mute);
+    }
+
+    .text-signal {
+      color: var(--color-signal);
+    }
+
+    .text-pine {
+      color: var(--color-pine);
+    }
+
+    .text-alarm {
+      color: var(--color-alarm);
+    }
+
+    .bg-panel {
+      background-color: var(--color-panel);
+    }
+
+    .bg-canvas {
+      background-color: var(--color-canvas);
+    }
+
+    .bg-raise {
+      background-color: var(--color-raise);
+    }
+
+    /* Progress Ring styles */
+    .progress-ring-container {
+      position: relative;
+      width: 88px;
+      height: 88px;
+    }
+
+    .progress-ring-container svg {
+      transform: rotate(-90deg);
+    }
+
+    .progress-ring-container circle {
+      fill: none;
+      stroke-width: 7;
+      stroke-linecap: round;
+    }
+
+    .progress-ring-track {
+      stroke: var(--color-line);
+      stroke-width: 7;
+    }
+
+    .progress-ring-progress {
+      stroke: var(--color-signal);
+      stroke-width: 7;
+      stroke-dasharray: 241.25;
+      stroke-dashoffset: calc(241.25 - (percent / 100) * 241.25);
+    }
+
+    /* Stats card */
+    .stat-card {
+      @apply rounded-xl border border-line bg-panel p-4 flex items-center gap-4;
+    }
+
+    /* Tab styles */
+    .tab {
+      @apply rounded-lg border border-line bg-panel px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-signal/60 hover:text-signal;
+    }
+
+    .tab-active {
+      @apply rounded-lg bg-signal px-4 py-2.5 text-sm font-semibold text-canvas transition-all hover:brightness-110 active:scale-[0.98];
+    }
+
+    /* Section header */
+    .section-header {
+      @apply font-display text-sm font-semibold uppercase tracking-widest text-dim;
+    }
+
+    /* Card */
+    .card {
+      @apply rounded-lg border border-line bg-panel p-4;
+    }
+
+    /* Button */
+    .btn {
+      @apply rounded-lg font-semibold transition-all hover:brightness-110 active:scale-[0.98];
+    }
+
+    .btn-signal {
+      @apply bg-signal px-4 py-2.5 text-sm text-canvas;
+    }
+
+    .btn-dim {
+      @apply bg-raise px-4 py-2.5 text-sm text-ink border border-line;
+    }
+
+    /* Grid gaps */
+    .grid-gap {
+      @apply grid gap-6 lg:grid-cols-5;
+    }
+
+    /* Trend dots */
+    .trend-dot {
+      @apply h-1.5 flex-1 rounded-full;
+    }
+
+    /* Progress ring label */
+    .progress-ring-label {
+      @apply font-display text-lg font-bold leading-none;
+    }
+
+    .progress-ring-sub {
+      @apply mt-0.5 text-[9px] text-dim;
+    }
+
+    /* Code highlight */
+    .code-token-cmt { color: #6b7684; font-style: italic; }
+    .code-token-str { color: #a8c07a; }
+    .code-token-pp { color: #d98b6c; }
+    .code-token-type { color: #45b8ad; }
+    .code-token-kw { color: #f0a13a; }
+    .code-token-num { color: #d4b26a; }
+    .code-token-fn { color: #e0c285; }
+
+    /* Animation */
+    .fade-in {
+      animation: fadeIn 0.6s ease-out forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .stagger-1 { animation-delay: 0.1s; }
+    .stagger-2 { animation-delay: 0.2s; }
+    .stagger-3 { animation-delay: 0.3s; }
+    .stagger-4 { animation-delay: 0.4s; }
+    .stagger-5 { animation-delay: 0.5s; }
+
+    /* Marquee effect for track names */
+    .marquee {
+      overflow: hidden;
+    }
+
+    .marquee-inner {
+      display: inline-block;
+      animation: marquee 20s linear infinite;
+    }
+
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <!-- Navigation -->
+  <nav class="border-b border-line/50 bg-canvas/80 backdrop-blur-sm sticky top-0 z-20">
+    <div class="max-w-5xl mx-auto h-16 flex items-center justify-between px-6">
+      <div className="flex items-center gap-3">
+        <span class="h-2 w-2 rounded-full bg-signal" />
+        <span className="font-display text-sm font-semibold uppercase tracking-widest text-signal">C Learning</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="#overview" class="text-dim hover:text-ink transition-colors">개요</a>
+        <a href="#dashboard" class="text-dim hover:text-ink transition-colors">대시보드</a>
+        <a href="#practice" class="text-dim hover:text-ink transition-colors">코딩 연습</a>
+        <a href="#quiz" class="text-dim hover:text-ink transition-colors">퀴즈</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-5xl mx-auto py-12">
+    <!-- Hero/Overview Section -->
+    <section id="overview" class="mb-12">
+      <div class="text-center mb-8">
+        <h1 class="font-display text-4xl font-bold tracking-tight mb-3">C Learning Platform</h1>
+        <p class="text-lg text-dim max-w-2xl mx-auto">
+          임베디드 C 개발자를 위한 실전 학습 플랫폼. 강의, 연습, 퀴즈를 통해
+          체계적인 역량을 키우세요.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto stagger-1">
+        <div class="card p-6 fade-in">
+          <div class="h-12 w-12 rounded-lg bg-signal/10 flex items-center justify-center mb-4">
+            <svg class="h-6 w-6 text-signal" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L4 7l8 5 8-5-8-5z" />
+              <path d="M0 7l5 8h14l5-8H0z" />
+            </svg>
+          </div>
+          <h3 class="font-display text-xl font-semibold mb-2">통합 대시보드</h3>
+          <p class="text-dim">학습 진행률, 퀴즈 정답률, cumulative solves 한눈에 보기</p>
+        </div>
+
+        <div class="card p-6 fade-in stagger-2">
+          <div class="h-12 w-12 rounded-lg bg-pine/10 flex items-center justify-center mb-4">
+            <svg class="h-6 w-6 text-pine" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L4 7l8 5 8-5-8-5z" />
+              <path d="M0 7l5 8h14l5-8H0z" />
+            </svg>
+          </div>
+          <h3 class="font-display text-xl font-semibold mb-2">코딩 연습장</h3>
+          <p class="text-dim">실시간 C 코드 실행 및 실행 결과 확인. 토큰 하이라이트 지원</p>
+        </div>
+
+        <div class="card p-6 fade-in stagger-3">
+          <div class="h-12 w-12 rounded-lg bg-aqua/10 flex items-center justify-center mb-4">
+            <svg class="h-6 w-6 text-aqua" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L4 7l8 5 8-5-8-5z" />
+              <path d="M0 7l5 8h14l5-8H0z" />
+            </svg>
+          </div>
+          <h3 class="font-display text-xl font-semibold mb-2">실전 퀴즈</h3>
+          <p class="text-dim">다지선다 퀴즈와 해설. 오답 노트와_progress 트래킹</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dashboard Section -->
+    <section id="dashboard" class="mb-12">
+      <div class="section-header mb-6">대시보드</div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <!-- Completion Progress -->
+        <div class="stat-card fade-in stagger-1">
+          <div class="progress-ring-container">
+            <svg viewBox="0 0 88 88" class="absolute">
+              <circle
+                cx="44"
+                cy="44"
+                r="35.5"
+                class="progress-ring-track"
+              />
+              <circle
+                cx="44"
+                cy="44"
+                r="35.5"
+                stroke="var(--color-signal)"
+                stroke-width="7"
+                stroke-linecap="round"
+                stroke-dasharray="241.25"
+                stroke-dashoffset="calc(241.25 - (92 / 100) * 241.25)"
+                class="progress-ring-progress"
+              />
+            </svg>
+            <div class="progress-ring-label">92</div>
+            <div class="progress-ring-sub">강의 완료</div>
+          </div>
+          <div>
+            <div class="font-display text-xl font-bold">92</div>
+            <div class="text-sm font-medium text-dim"> / 100</div>
+            <div class="mt-1 text-xs text-dim">완료한 강의</div>
+          </div>
+        </div>
+
+        <!-- Quiz Accuracy -->
+        <div class="stat-card fade-in stagger-2">
+          <div class="progress-ring-container">
+            <svg viewBox="0 0 88 88" class="absolute">
+              <circle
+                cx="44"
+                cy="44"
+                r="35.5"
+                class="progress-ring-track"
+              />
+              <circle
+                cx="44"
+                cy="44"
+                r="35.5"
+                stroke="var(--color-pine)"
+                stroke-width="7"
+                stroke-linecap="round"
+                stroke-dasharray="241.25"
+                stroke-dashoffset="calc(241.25 - (85 / 100) * 241.25)"
+                class="progress-ring-progress"
+              />
+            </svg>
+            <div class="progress-ring-label">85</div>
+            <div class="progress-ring-sub">퀴즈 정답</div>
+          </div>
+          <div>
+            <div class="font-display text-xl font-bold">85%</div>
+            <div class="text-sm font-medium text-dim">퀴즈 정답률</div>
+          </div>
+        </div>
+
+        <!-- Total Solves -->
+        <div class="stat-card fade-in stagger-3">
+          <div class="flex items-center gap-4">
+            <div class="font-display text-2xl font-bold">342</div>
+            <div>
+              <div class="text-xs text-dim">누적 풀이 수</div>
+              <div class="mt-1 text-[11px] text-dim">정답 214 · 오답 128</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Track Progress -->
+        <div class="stat-card fade-in stagger-4">
+          <div class="font-display text-2xl font-bold">4</div>
+          <div class="mt-1 text-xs text-dim"> / 5</div>
+          <div class="mt-3 text-[11px] text-dim">완주한 트랙</div>
+          <div class="mt-3 flex gap-1">
+            {['System', 'Network', 'Application', 'Security'].map((name, i) => (
+              <span
+                key={i}
+                className="h-1.5 flex-1 rounded-full"
+                style={{ backgroundColor: i < 4 ? "var(--color-signal)" : "var(--color-line)" }}
+                title={name}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <!-- Upcoming Lessons -->
+      <div class="card fade-in stagger-5 mb-8">
+        <div class="section-header mb-4">이어 배울 강의</div>
+        <p class="text-dim text-sm mb-4">다음 학습을 위한 추천 강의</p>
+
+        <div class="space-y-2.5">
+          <div class="flex items-center gap-4 rounded-lg border border-line bg-panel p-3 group">
+            <span className="h-8 w-1 shrink-0 rounded-full" style={{ backgroundColor: "#f0a13a" }} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-dim">ES01</span>
+                <span className="rounded border border-line px-1.5 py-px text-[10px] text-mute">중급</span>
+              </div>
+              <div className="mt-0.5 truncate text-sm font-semibold group-hover:text-signal">포인터와 메모리 관리</div>
+              <p className="mt-0.5 line-clamp-1 text-xs text-mute">동적 할당의 원리와 실제</p>
+            </div>
+            <span className="shrink-0 font-mono text-[11px] text-dim">15분</span>
+          </div>
+
+          <div class="flex items-center gap-4 rounded-lg border border-line bg-panel p-3 group">
+            <span className="h-8 w-1 shrink-0 rounded-full" style={{ backgroundColor: "#58c07d" }} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-dim">ES02</span>
+                <span className="rounded border border-line px-1.5 py-px text-[10px] text-mute">중급</span>
+              </div>
+              <div className="mt-0.5 truncate text-sm font-semibold group-hover:text-signal">데이터 구조</div>
+              <p className="mt-0.5 line-clamp-1 text-xs text-mute">해시 테이블과 트리</p>
+            </div>
+            <span className="shrink-0 font-mono text-[11px] text-dim">20분</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Track Progress Overview -->
+      <div class="card fade-in">
+        <div class="section-header mb-4">트랙별 진행률</div>
+        <div class="space-y-2">
+          <div class="flex items-center gap-3">
+            <span className="w-28 shrink-0 truncate text-xs text-mute">System Track</span>
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-canvas">
+              <div className="h-full rounded-full transition-all" style={{ width: "80%", backgroundColor: "#f0a13a" }} />
+            </div>
+            <span className="w-10 shrink-0 text-right font-mono text-[11px] text-dim">8/10</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <span className="w-28 shrink-0 truncate text-xs text-mute">Network Track</span>
+            <div className="h-2 flex-1 overflow-hidden bg-canvas">
+              <div className="h-full rounded-full transition-all" style={{ width: "65%", backgroundColor: "#58c07d" }} />
+            </div>
+            <span className="w-10 shrink-0 text-right font-mono text-[11px] text-dim">6/10</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <span className="w-28 shrink-0 truncate text-xs text-mute">Application Track</span>
+            <div className="h-2 flex-1 overflow-hidden bg-canvas">
+              <div className="h-full rounded-full transition-all" style={{ width: "45%", backgroundColor: "#45b8ad" }} />
+            </div>
+            <span className="w-10 shrink-0 text-right font-mono text-[11px] text-dim">4/10</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <span className="w-28 shrink-0 truncate text-xs text-mute">Security Track</span>
+            <div className="h-2 flex-1 overflow-hidden bg-canvas">
+              <div className="h-full rounded-full transition-all" style={{ width: "25%", backgroundColor: "#e0605e" }} />
+            </div>
+            <span className="w-10 shrink-0 text-right font-mono text-[11px] text-dim">2/10</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Coding Practice (C Runner) Section -->
+    <section id="practice" class="mb-12">
+      <div class="section-header mb-6">코딩 연습장</div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Code Editor Area -->
+        <div class="card fade-in">
+          <div class="section-header mb-4">C 코드 실행하기</div>
+          <p class="text-dim text-sm mb-4">아래에 C 코드를 입력하고 실행해 보세요.</p>
+
+          <div class="space-y-3">
+            <!-- Code Input -->
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-dim mb-2">코드 입력</label>
+              <pre class="p-3 rounded-lg border border-line bg-code font-mono text-[12px] leading-relaxed" spellCheck="false">
+/* 예제: 팩토리얼 함수 */
+int factorial(int n) {
+  if (n <= 1) return 1;
+  return n * factorial(n - 1);
+}
+
+// main 함수
+int main() {
+  int result = factorial(5);
+  return 0;
+}
+              </pre>
+            </div>
+
+            <!-- Run Button & Result -->
+            <div class="flex gap-3">
+              <button className="btn btn-signal flex-1">실행</button>
+              <button className="btn btn-dim flex-1">초기화</button>
+            </div>
+
+            <!-- Result Area -->
+            <div id="result" class="mt-4 hidden p-3 rounded-lg bg-panel border border-line/70">
+              <div class="font-mono text-[12px]" id="result-text"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Output & Explanation -->
+        <div class="card fade-in stagger-2">
+          <div class="section-header mb-4">실행 결과</div>
+          <div class="space-y-3">
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-dim mb-2">출력된 내용</label>
+              <pre class="p-3 rounded-lg border border-line bg-code/50 font-mono text-[12px] leading-relaxed" spellCheck="false">
+Hello, World!
+Program exiting with code: 0
+              </pre>
+            </div>
+
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-dim mb-2">코드 설명</label>
+              <p class="text-dim text-sm leading-relaxed">
+                이 코드는 재귀 함수를 사용하여 팩토리얼을 계산합니다. factorial(5) 호출 시
+                5 × 4 × 3 × 2 × 1 = 120이 출력됩니다.
+              </p>
+            </div>
+
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-dim mb-2">핵심 개념</label>
+              <ul class="text-dim text-sm space-y-1">
+                <li className="flex items-start gap-2">
+                  <span className="h-2 w-2 rounded-full bg-signal/70 flex-shrink-0" />
+                  <span>재귀 함수: 자기 자신을 호출하는 함수</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="h-2 w-2 rounded-full bg-pine/70 flex-shrink-0" />
+                  <span>베이스 케이스: 재귀 종료 조건 (n <= 1)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="h-2 w-2 rounded-full bg-code/70 flex-shrink-0" />
+                  <span>스택 메모리: 함수 호출 시 쌓이는 메모리</span>
+                </li>
+              </ul>
+            div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Tips -->
+      <div class="card fade-in stagger-3 pt-8">
+        <div class="section-header mb-4">C 프로그래밍 팁</div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="text-dim text-sm mb-2">메모리 관리</p>
+            <ul class="text-[11px] text-dim space-y-1">
+              <li>포인터 할당 전 반드시 메모리 확인</li>
+              <li>free()로 동적 메모리 해제 후 NULL 대입</li>
+              <li>버퍼 오버플로우를 위한 문자열 길이 제한</li>
+            </ul>
+          </div>
+          <div>
+            <p class="text-dim text-sm mb-2">디버깅</p>
+            <ul class="text-[11px] text-dim space-y-1">
+              <li>printf로 변수 값 실시간 확인</li>
+              <li>gdb나 lldb 디버거 활용</li>
+              <li>경고 메시지(-Wall -Wextra) 반드시 확인</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quiz Section -->
+    <section id="quiz" class="mb-12">
+      <div class="section-header mb-6">실전 퀴즈</div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Quiz Stats -->
+        <div class="card fade-in">
+          <div class="p-4 border-b border-line/50">
+            <div class="font-display text-2xl font-bold" id="total-quizzes">5</div>
+            <div class="text-xs text-dim">총 퀴즈 수</div>
+          </div>
+          <div class="p-4">
+            <div class="font-display text-xl font-bold" id="accuracy-rate">82</div>
+            <div class="text-dim">정답률</div>
+          </div>
+        </div>
+
+        <!-- Current Question -->
+        <div class="card fade-in stagger-2">
+          <div class="p-4">
+            <div class="font-mono text-[10px] uppercase tracking-widest text-dim mb-3">문제 1 / 5</div>
+            <p class="text-[15px] font-medium leading-relaxed" id="question-prompt">
+              다음 코드의 출력 결과를 예측하세요.
+            </p>
+            <div id="question-code" class="mt-3 p-3 rounded-lg bg-code font-mono text-[12px] overflow-x-auto"></div>
+          </div>
+        </div>
+
+        <!-- Options -->
+        <div class="card fade-in stagger-3 pt-6">
+          <div class="section-header mb-3">정답 선택</div>
+          <div class="space-y-2">
+            <button className="w-full rounded-lg border border-line bg-canvas/40 hover:border-edge text-left text-sm transition-all cursor-pointer">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-edge font-mono text-[11px] text-mute">A</span>
+              <span className="font-mono text-[13px] leading-relaxed">포인터 p의 값이 10이 출력됩니다.</span>
+            </button>
+
+            <button className="w-full rounded-lg border border-line bg-canvas/40 hover:border-edge text-left text-sm transition-all cursor-pointer">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-edge font-mono text-[11px] text-mute">B</span>
+              <span className="font-mono text-[13px] leading-relaxed">세그먼트 폴리오가 발생합니다.</span>
+            </button>
+
+            <button className="w-full rounded-lg border border-line bg-canvas/40 hover:border-edge text-left text-sm transition-all cursor-pointer">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-edge font-mono text-[11px] text-mute">C</span>
+              <span className="font-mono text-[13px] leading-relaxed">컴파일 오류가 발생합니다.</span>
+            </button>
+
+            <button className="w-full rounded-lg border border-line bg-canvas/40 hover:border-edge text-left text-sm transition-all cursor-pointer">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-edge font-mono text-[11px] text-mute">D</span>
+              <span className="font-mono text-[13px] leading-relaxed">0이 출력됩니다.</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quiz Result -->
+      <div id="quiz-result" class="card fade-in mt-8 hidden p-6 text-center">
+        <div class="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center">
+          <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L4 7l8 5 8-5-8-5z" />
+            <path d="M0 7l5 8h14l5-8H0z" />
+          </svg>
+        </div>
+        <h3 class="font-display text-xl font-bold mb-2" id="result-title">결과 보기</h3>
+        <p class="text-dim mb-4" id="result-explanation">정답과 해설을 확인하세요.</p>
+        <button className="btn btn-signal mt-4">다른 퀴즈 풀기</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="mt-12 border-t border-line/50 py-8 text-dim text-center">
+    <p class="text-sm">C Learning Platform · 2026 · All rights reserved</p>
+  </footer>
+
+  <script>
+    // Initialize the page
+    document.addEventListener('DOMContentLoaded', function() {
+      // Tab navigation
+      const navLinks = document.querySelectorAll('nav a');
+      const sections = document.querySelectorAll('section');
+
+      navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href').substring(1);
+
+          // Update nav state
+          navLinks.forEach(l => l.classList.remove('text-ink', 'hover:text-ink'));
+          this.classList.add('text-ink');
+
+          // Show target section
+          sections.forEach(section => {
+            section.classList.add('hidden');
+            if (section.id === targetId) {
+              section.classList.remove('hidden');
+            }
+          });
+        });
+      });
+
+      // Initialize first section
+      if (sections.length > 0) {
+        sections[0].classList.remove('hidden');
+      }
+
+      // Code runner functionality
+      const runBtn = document.querySelector('.btn:first-child');
+      const resultDiv = document.getElementById('result');
+      const resultText = document.getElementById('result-text');
+      const resultContainer = document.getElementById('result');
+
+      if (runBtn) {
+        runBtn.addEventListener('click', function() {
+          const codeInput = document.querySelector('pre[spellCheck="false"]').textContent;
+          // Simulate code execution
+          resultContainer.classList.remove('hidden');
+          resultText.innerHTML = '<span class="text-pine">✓ 실행 성공</span><br/>'
+            + '출력: Hello, World!<br/>'
+            + '프로그램 종료 코드: 0';
+        });
+      }
+
+      // Quiz functionality
+      const quizButtons = document.querySelectorAll('#quiz .cursor-pointer');
+      const quizResult = document.getElementById('quiz-result');
+      const resultTitle = document.getElementById('result-title');
+      const resultExplanation = document.getElementById('result-explanation');
+
+      quizButtons.forEach((btn, index) => {
+        btn.addEventListener('click', function() {
+          // Hide options, show result
+          quizButtons.forEach(b => b.style.display = 'none');
+          
+          // Show correct result (option A is correct in this case)
+          resultTitle.innerText = '정답입니다!';
+          resultExplanation.innerHTML = '포인터 p가 올바르게 초기화되어 10이 출력됩니다.';
+          quizResult.classList.remove('hidden');
+        });
+      });
+
+      // Stagger animation on scroll
+      const fadeElements = document.querySelectorAll('.fade-in');
+      
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+          if (entry.isIntersecting) {
+            setTimeout(() => {
+              entry.target.style.animation = 'fadeIn 0.6s ease-out forwards';
+              entry.target.style.opacity = '1';
+            }, index * 100);
+            observer.unobserve(entry.target);
+          }
+        });
+      }, observerOptions);
+
+      fadeElements.forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(10px)';
+        observer.observe(el);
+      });
+    });
+  </script>
+</body>
+</html>
