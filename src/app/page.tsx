@@ -6,6 +6,13 @@ import { lessonProgress, quizAttempts } from "@/db/schema";
 import { LESSONS, TRACKS, orderedLessons } from "@/data/course";
 import { questionById } from "@/data/questions";
 import { getLearner } from "@/lib/learner";
+import {
+  buildReminder,
+  formatElapsed,
+  getLastActivity,
+  getWeakTracks,
+  REMINDER_COLOR,
+} from "@/lib/insights";
 import Onboarding from "@/components/Onboarding";
 import ProgressRing from "@/components/ProgressRing";
 
@@ -45,6 +52,8 @@ export default async function DashboardPage() {
   }
 
 let progressRows, agg, recentAttempts;
+  let weakTracks: Awaited<ReturnType<typeof getWeakTracks>> = [];
+  let lastActivity: Date | null = null;
   let hasError = false;
   let errorMessage: string | null = null;
 
@@ -66,29 +75,10 @@ let progressRows, agg, recentAttempts;
       .where(eq(quizAttempts.learnerId, learner.id))
       .orderBy(desc(quizAttempts.id))
       .limit(6);
-  } catch (e) {
-    hasError = true;
-    errorMessage = e instanceof Error ? e.message : "학습 데이터를 불러오는 중 오류가 발생했습니다.";
-  }
-
-  try {
-    progressRows = await db
-      .select()
-      .from(lessonProgress)
-      .where(and(eq(lessonProgress.learnerId, learner.id), eq(lessonProgress.completed, true)));
-    agg = await db
-      .select({
-        total: sql<number>`(count(*))::int`,
-        correct: sql<number>`(count(*) filter (where ${quizAttempts.isCorrect}))::int`,
-      })
-      .from(quizAttempts)
-      .where(eq(quizAttempts.learnerId, learner.id));
-    recentAttempts = await db
-      .select()
-      .from(quizAttempts)
-      .where(eq(quizAttempts.learnerId, learner.id))
-      .orderBy(desc(quizAttempts.id))
-      .limit(6);
+    [weakTracks, lastActivity] = await Promise.all([
+      getWeakTracks(learner.id),
+      getLastActivity(learner.id),
+    ]);
   } catch (e) {
     hasError = true;
     errorMessage = e instanceof Error ? e.message : "학습 데이터를 불러오는 중 오류가 발생했습니다.";
@@ -122,6 +112,9 @@ let progressRows, agg, recentAttempts;
 
   const upcoming = orderedLessons().filter((l) => !completedIds.has(l.id)).slice(0, 3);
 
+  const reminder = buildReminder(lastActivity);
+  const reminderColor = REMINDER_COLOR[reminder.tone];
+
   return (
     <Suspense fallback={<ProgressRing percent={0} size={72} stroke={7} sub="강의" />}>
       <div className="mx-auto max-w-5xl">
@@ -154,6 +147,38 @@ let progressRows, agg, recentAttempts;
             이어서 학습하기 →
           </Link>
         </div>
+      </div>
+
+      {/* 학습 리마인더 */}
+      <div
+        className="mt-6 flex items-center gap-3 rounded-xl border p-4"
+        style={{
+          borderColor: `${reminderColor}55`,
+          backgroundColor: `${reminderColor}12`,
+        }}
+      >
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm"
+          style={{ backgroundColor: `${reminderColor}22`, color: reminderColor }}
+        >
+          {reminder.tone === "good" ? "✓" : reminder.tone === "warn" ? "⏰" : "⚠"}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold" style={{ color: reminderColor }}>
+            {reminder.message}
+          </p>
+          {lastActivity ? (
+            <p className="mt-0.5 text-xs text-mute">
+              마지막 학습: {formatElapsed(lastActivity)}
+            </p>
+          ) : null}
+        </div>
+        <Link
+          href="/learn"
+          className="shrink-0 rounded-lg bg-signal px-3 py-1.5 text-xs font-semibold text-canvas transition-all hover:brightness-110 active:scale-[0.98]"
+        >
+          학습하기
+        </Link>
       </div>
 
       {/* 통계 */}
@@ -215,6 +240,75 @@ let progressRows, agg, recentAttempts;
           </div>
         </div>
       </div>
+
+      {/* 취약 주제 추천 */}
+      {weakTracks.length > 0 ? (
+        <div className="mt-8">
+          <h2 className="font-display text-sm font-semibold uppercase tracking-widest text-dim">
+            보강이 필요한 주제
+          </h2>
+          <p className="mt-1 text-xs text-mute">
+            정답률이 70% 미만인 트랙입니다. 관련 강의를 복습해 보세요.
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {weakTracks.map((w) => (
+              <div
+                key={w.trackId}
+                className="rounded-xl border border-line bg-panel p-4"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: w.color }}
+                    />
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-dim">
+                      {w.trackCode}
+                    </span>
+                  </div>
+                  <span
+                    className="rounded-full px-2 py-0.5 font-mono text-[11px] font-bold"
+                    style={{
+                      backgroundColor: `${w.color}22`,
+                      color: w.color,
+                    }}
+                  >
+                    {w.accuracy}%
+                  </span>
+                </div>
+                <div className="mt-1.5 font-display text-sm font-semibold">
+                  {w.trackName}
+                </div>
+                <p className="mt-1 text-[11px] text-dim">
+                  {w.attempts}문제 중 {w.correct}문제 정답
+                </p>
+                {w.recommendedLessons.length > 0 ? (
+                  <div className="mt-3 space-y-1.5 border-t border-line/60 pt-3">
+                    {w.recommendedLessons.map((l) => (
+                      <Link
+                        key={l.id}
+                        href={`/learn/${l.id}`}
+                        className="group flex items-center justify-between gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-raise"
+                      >
+                        <span className="truncate text-xs font-medium text-ink group-hover:text-signal">
+                          {l.title}
+                        </span>
+                        <span className="shrink-0 font-mono text-[10px] text-dim">
+                          {l.minutes}분
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-3 border-t border-line/60 pt-3 text-[11px] text-pine">
+                    모든 강의를 완료했습니다. 퀴즈로 복습하세요!
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-5">
         {/* 이어 배우기 */}
