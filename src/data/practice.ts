@@ -18,6 +18,12 @@
  *   10. 기술 발표와 면접 패키지
  *   11. 실시간성·Jitter·Deadline 분석
  *   12. 자동차 사이버보안 TARA
+ *   13. 엔디언 검출과 바이트 순서 변환
+ *   14. 비트 조작 레지스터 관용구
+ *   15. 원형 버퍼(Ring Buffer) 구현
+ *   16. volatile과 컴파일러 최적화
+ *   17. 구조체 정렬과 패딩 최적화
+ *   18. Aligned malloc 구현
  */
 
 export type PracticeLevel = "초급" | "중급" | "고급";
@@ -36,7 +42,11 @@ export type PracticeTopic =
   | "실시간성"
   | "사이버보안"
   | "TARA"
-  | "FMEA";
+  | "FMEA"
+  | "C 기초"
+  | "메모리"
+  | "비트연산"
+  | "자료구조";
 
 export type Practice = {
   id: string;
@@ -71,6 +81,10 @@ export const PRACTICE_TOPICS: PracticeTopic[] = [
   "사이버보안",
   "TARA",
   "FMEA",
+  "C 기초",
+  "메모리",
+  "비트연산",
+  "자료구조",
 ];
 
 export const PRACTICE_LEVELS: PracticeLevel[] = ["초급", "중급", "고급"];
@@ -90,6 +104,10 @@ export const TOPIC_COLOR: Record<PracticeTopic, string> = {
   "사이버보안": "#2e5e3e",
   TARA: "#7a4f1d",
   FMEA: "#8b6f8b",
+  "C 기초": "#3f8ac0",
+  "메모리": "#8a6d3b",
+  "비트연산": "#2f9e44",
+  "자료구조": "#e8590c",
 };
 
 export const PRACTICES: Practice[] = [
@@ -966,6 +984,337 @@ int main(void) {
                r_str, t_str);
     }
     printf("└──────────┴─────────────┴─────┴─────┴─────┴────────┘\\n");
+    return 0;
+}
+`,
+  },
+
+  // ─── 13. 엔디언 검출과 바이트 순서 변환 ───────────────────────────
+  {
+    id: "practice-endianness",
+    title: "13 · 엔디언 검출과 바이트 순서 변환",
+    topic: "C 기초",
+    level: "초급",
+    minutes: 25,
+    description:
+      "호스트의 엔디언(리틀/빅)을 union과 포인터 캐스팅으로 검출하고, 네트워크/버스 바이트 순서 변환 함수(swap16/swap32)를 구현합니다. CAN·Ethernet 통신 스택에서 매일 마주치는 문제입니다.",
+    keyPoints: [
+      "union 멤버 접근으로 메모리 레이아웃 관찰",
+      "포인터 캐스팅으로 최하위 바이트 검사",
+      "swap16/swap32: 시프트와 마스크로 바이트 재배열",
+    ],
+    source: "arunkann/embedded_software (GitHub)",
+    code: `#include <stdio.h>
+#include <stdint.h>
+
+/* 방법 1: union으로 메모리 레이아웃 관찰 */
+typedef union {
+    uint16_t value;
+    uint8_t  bytes[2];
+} EndianProbe_t;
+
+/* 방법 2: 포인터 캐스팅으로 최하위 바이트 검사 */
+int is_little_endian(void) {
+    uint16_t x = 0x0001u;
+    return *(uint8_t *)&x == 0x01u;
+}
+
+/* 바이트 순서 변환 */
+uint16_t swap16(uint16_t v) {
+    return (uint16_t)((v << 8) | (v >> 8));
+}
+
+uint32_t swap32(uint32_t v) {
+    return ((v & 0x000000FFu) << 24)
+         | ((v & 0x0000FF00u) << 8)
+         | ((v & 0x00FF0000u) >> 8)
+         | ((v & 0xFF000000u) >> 24);
+}
+
+int main(void) {
+    EndianProbe_t probe = { .value = 0x1234u };
+    printf("union 검출: bytes[0]=0x%02X → %s 엔디언\\n",
+           probe.bytes[0],
+           (probe.bytes[0] == 0x34u) ? "리틀" : "빅");
+    printf("포인터 검출: %s 엔디언\\n",
+           is_little_endian() ? "리틀" : "빅");
+
+    uint16_t net16 = 0x1234u;
+    uint32_t net32 = 0x12345678u;
+    printf("swap16(0x%04X) = 0x%04X\\n", net16, swap16(net16));
+    printf("swap32(0x%08X) = 0x%08X\\n", net32, swap32(net32));
+    return 0;
+}
+`,
+  },
+
+  // ─── 14. 비트 조작 레지스터 관용구 ───────────────────────────
+  {
+    id: "practice-bit-manipulation",
+    title: "14 · 비트 조작 레지스터 관용구",
+    topic: "비트연산",
+    level: "초급",
+    minutes: 20,
+    description:
+      "임베디드 레지스터 조작의 핵심 관용구인 set/clear/toggle/check를 매크로와 함수 두 방식으로 구현합니다. 비트필드 vs 매크로의 trade-off를 이해합니다.",
+    keyPoints: [
+      "set: |=  / clear: &= ~ / toggle: ^= / check: &",
+      "매크로는 타입 검사가 없지만 인라인 확장으로 오버헤드 없음",
+      "volatile 레지스터 포인터와 함께 사용하는 이유",
+    ],
+    source: "arunkann/embedded_software (GitHub)",
+    code: `#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+/* 매크로 방식: 타입 검사 없음, 인라인 확장 */
+#define BIT_SET(reg, mask)   ((reg) |= (mask))
+#define BIT_CLEAR(reg, mask) ((reg) &= ~(mask))
+#define BIT_TOGGLE(reg, mask)((reg) ^= (mask))
+#define BIT_CHECK(reg, mask) (((reg) & (mask)) != 0u)
+
+/* 함수 방식: 타입 안전, 호출 오버헤드 */
+static inline void reg_set(uint32_t *reg, uint32_t mask)   { *reg |= mask; }
+static inline void reg_clear(uint32_t *reg, uint32_t mask) { *reg &= ~mask; }
+static inline void reg_toggle(uint32_t *reg, uint32_t mask){ *reg ^= mask; }
+static inline bool reg_check(const uint32_t *reg, uint32_t mask) {
+    return (*reg & mask) != 0u;
+}
+
+int main(void) {
+    uint32_t reg = 0x00000000u;
+    const uint32_t BIT0 = 1u << 0;
+    const uint32_t BIT3 = 1u << 3;
+
+    BIT_SET(reg, BIT0 | BIT3);
+    printf("set:   0x%08X\\n", reg);
+
+    BIT_CLEAR(reg, BIT3);
+    printf("clear: 0x%08X\\n", reg);
+
+    BIT_TOGGLE(reg, BIT0);
+    printf("toggle:0x%08X\\n", reg);
+
+    printf("BIT0=%s BIT3=%s\\n",
+           BIT_CHECK(reg, BIT0) ? "1" : "0",
+           reg_check(&reg, BIT3) ? "1" : "0");
+    return 0;
+}
+`,
+  },
+
+  // ─── 15. 원형 버퍼(Ring Buffer) 구현 ───────────────────────────
+  {
+    id: "practice-ring-buffer",
+    title: "15 · 원형 버퍼(Ring Buffer) 구현",
+    topic: "자료구조",
+    level: "중급",
+    minutes: 35,
+    description:
+      "UART/CAN 수신 스트림에서 가장 많이 쓰는 자료구조인 원형 버퍼를 구현합니다. head/tail 인덱스와 count 기반 full/empty 판정으로 ISR과 태스크 간 안전한 데이터 전달을 모델링합니다.",
+    keyPoints: [
+      "head(쓰기)/tail(읽기) 인덱스와 모듈로 연산",
+      "count 기반 full/empty 판정으로 head==tail 모호성 제거",
+      "ISR 생산자·태스크 소비자 패턴의 기초",
+    ],
+    source: "kedar2017/Embedded_Prep (GitHub)",
+    code: `#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+#define RB_SIZE 8u
+
+typedef struct {
+    uint8_t buf[RB_SIZE];
+    uint8_t head;   /* 다음 쓰기 위치 */
+    uint8_t tail;   /* 다음 읽기 위치 */
+    uint8_t count;  /* 현재 저장된 요소 수 */
+} RingBuffer_t;
+
+void rb_init(RingBuffer_t *rb) {
+    rb->head = rb->tail = rb->count = 0u;
+}
+
+bool rb_push(RingBuffer_t *rb, uint8_t byte) {
+    if (rb->count >= RB_SIZE) return false;  /* full */
+    rb->buf[rb->head] = byte;
+    rb->head = (rb->head + 1u) % RB_SIZE;
+    rb->count++;
+    return true;
+}
+
+bool rb_pop(RingBuffer_t *rb, uint8_t *out) {
+    if (rb->count == 0u) return false;  /* empty */
+    *out = rb->buf[rb->tail];
+    rb->tail = (rb->tail + 1u) % RB_SIZE;
+    rb->count--;
+    return true;
+}
+
+int main(void) {
+    RingBuffer_t rb;
+    rb_init(&rb);
+
+    /* 10개 push: 8개 성공, 2개 overflow */
+    for (uint8_t i = 0; i < 10u; i++) {
+        printf("push %u: %s\\n", i, rb_push(&rb, i) ? "OK" : "FULL");
+    }
+
+    /* 전부 pop */
+    uint8_t v;
+    while (rb_pop(&rb, &v)) {
+        printf("pop: %u\\n", v);
+    }
+    return 0;
+}
+`,
+  },
+
+  // ─── 16. volatile과 컴파일러 최적화 ───────────────────────────
+  {
+    id: "practice-volatile",
+    title: "16 · volatile과 컴파일러 최적화",
+    topic: "C 기초",
+    level: "중급",
+    minutes: 25,
+    description:
+      "ISR과 공유하는 플래그 변수에 volatile이 필요한 이유를 체험합니다. volatile 없이는 컴파일러가 루프 조건을 최적화로 제거해 무한 루프에 빠질 수 있습니다.",
+    keyPoints: [
+      "volatile: 컴파일러가 변수 접근을 최적화로 제거/캐시하지 못하게 함",
+      "ISR·하드웨어 레지스터·멀티스레드 공유 변수에 필수",
+      "volatile은 원자성(atomicity)을 보장하지 않음",
+    ],
+    source: "kedar2017/Embedded_Prep (GitHub)",
+    code: `#include <stdio.h>
+#include <stdint.h>
+
+/* volatile: ISR이 바꾸는 값은 최적화 대상이 아님 */
+static volatile uint32_t g_flag = 0u;
+
+/* ISR 시뮬레이션 */
+void ISR_Handler(void) {
+    g_flag = 1u;
+}
+
+/* volatile 없이 선언하면 while(g_flag==0)이
+   컴파일러에 의해 무한 루프로 최적화될 수 있음 */
+uint32_t wait_for_flag(void) {
+    uint32_t spins = 0u;
+    while (g_flag == 0u) {
+        spins++;
+        if (spins > 1000000u) break;  /* 안전 장치 */
+    }
+    return spins;
+}
+
+int main(void) {
+    printf("flag 초기값: %u\\n", g_flag);
+    ISR_Handler();
+    uint32_t spins = wait_for_flag();
+    printf("flag=%u (spins=%u)\\n", g_flag, spins);
+    return 0;
+}
+`,
+  },
+
+  // ─── 17. 구조체 정렬과 패딩 최적화 ───────────────────────────
+  {
+    id: "practice-struct-alignment",
+    title: "17 · 구조체 정렬과 패딩 최적화",
+    topic: "메모리",
+    level: "중급",
+    minutes: 25,
+    description:
+      "구조체 필드 선언 순서에 따라 패딩 크기가 달라지는 것을 확인하고, 메모리 절약을 위해 필드를 정렬 기준(큰 타입 먼저)으로 재배치합니다. CAN 메시지 버퍼 설계에 직접 적용됩니다.",
+    keyPoints: [
+      "각 타입의 정렬 요구사항(alignment)과 패딩 삽입 규칙",
+      "큰 타입 먼저 선언하면 패딩 최소화",
+      "offsetof로 필드 오프셋 검증",
+    ],
+    source: "kedar2017/Embedded_Prep (GitHub)",
+    code: `#include <stdio.h>
+#include <stdint.h>
+#include <stddef.h>
+
+/* 비효율: 작은 타입 먼저 → 패딩 증가 */
+typedef struct {
+    uint8_t  a;   /* 1 */
+    uint32_t b;   /* 4 (3바이트 패딩 뒤) */
+    uint8_t  c;   /* 1 */
+} BadOrder_t;     /* 총 12바이트 */
+
+/* 효율: 큰 타입 먼저 → 패딩 최소화 */
+typedef struct {
+    uint32_t b;   /* 4 */
+    uint8_t  a;   /* 1 */
+    uint8_t  c;   /* 1 */
+} GoodOrder_t;    /* 총 8바이트 */
+
+int main(void) {
+    printf("BadOrder  size=%zu (패딩 낭비)\\n", sizeof(BadOrder_t));
+    printf("GoodOrder size=%zu\\n", sizeof(GoodOrder_t));
+
+    printf("BadOrder offsets: a=%zu b=%zu c=%zu\\n",
+           offsetof(BadOrder_t, a),
+           offsetof(BadOrder_t, b),
+           offsetof(BadOrder_t, c));
+    return 0;
+}
+`,
+  },
+
+  // ─── 18. Aligned malloc 구현 ───────────────────────────
+  {
+    id: "practice-aligned-malloc",
+    title: "18 · Aligned malloc 구현",
+    topic: "메모리",
+    level: "고급",
+    minutes: 40,
+    description:
+      "DMA·SIMD·캐시 라인 정렬이 필요한 메모리를 할당하는 aligned_malloc을 구현합니다. 원본 포인터를 정렬된 주소 앞에 저장해 해제 시 복원하는 기법을 익힙니다.",
+    keyPoints: [
+      "정렬 주소 계산: (addr + align - 1) & ~(align - 1)",
+      "원본 포인터를 정렬 주소 직전 슬롯에 저장",
+      "align은 2의 거듭제곱이어야 함",
+    ],
+    source: "arunkann/embedded_software (GitHub)",
+    code: `#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* 정렬된 메모리 할당:
+   raw = malloc(size + align + sizeof(void*))
+   정렬 주소 직전에 원본 포인터를 저장해 free 시 복원 */
+void *aligned_malloc(size_t size, size_t align) {
+    if (align == 0u || (align & (align - 1u)) != 0u) return NULL;
+
+    uint8_t *raw = (uint8_t *)malloc(size + align + sizeof(void *));
+    if (raw == NULL) return NULL;
+
+    uintptr_t addr = (uintptr_t)raw + sizeof(void *);
+    uintptr_t aligned = (addr + align - 1u) & ~(uintptr_t)(align - 1u);
+
+    ((void **)aligned)[-1] = raw;   /* 원본 저장 */
+    return (void *)aligned;
+}
+
+void aligned_free(void *ptr) {
+    if (ptr == NULL) return;
+    void *raw = ((void **)ptr)[-1];
+    free(raw);
+}
+
+int main(void) {
+    void *p = aligned_malloc(100u, 16u);
+    if (p == NULL) { printf("할당 실패\\n"); return 1; }
+
+    printf("주소: %p, 16바이트 정렬: %s\\n", p,
+           ((uintptr_t)p % 16u == 0u) ? "YES" : "NO");
+
+    memset(p, 0xAB, 100u);
+    aligned_free(p);
+    printf("해제 완료\\n");
     return 0;
 }
 `,
