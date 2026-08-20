@@ -9,7 +9,7 @@
 - **학습 트랙** — 5개 트랙 · 20+강의. 순서대로 완주 권장
 - **코딩 연습장** — 브라우저에서 C 코드를 실제 `gcc`로 컴파일·실행 (메모리/CPU 제한 적용)
 - **실전 퀴즈** — 학습 내용 점검 및 오답 기록 관리
-- **실습 예제** — 기본 문법부터 AUTOSAR, CAN, ISO-TP, TARA까지 12개 자동차 도메인 예제
+- **실습 예제** — 기본 문법부터 AUTOSAR, CAN, ISO-TP, TARA까지 38개 예제 (기본 22 + 심화 18 PRACTICES). expectedOutput 기반 auto-verification PASS/FAIL 및 keyPoints 노출
 - **용어 사전 / 프로젝트 로드맵** — 면접 준비 지원
 
 ## 기술 스택
@@ -135,6 +135,7 @@ src/
 | 10 | 기술 발표와 면접 패키지 | 초급 |
 | 11 | 실시간성·Jitter·Deadline 분석 | 중급 |
 | 12 | 자동차 사이버보안 TARA | 고급 |
+| 13-30 | PRACTICE 01-18 | 고급 | 자동차 도메인 심화 실습 (expectedOutput 기반 auto-verification PASS/FAIL, keyPoints 노출) |
 
 ## 학습 트랙
 
