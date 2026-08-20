@@ -128,7 +128,7 @@ export const PRACTICES: Practice[] = [
       "단위 테스트 가능성: 각 계층을 모킹해 비즈니스 로직만 검증",
     ],
     source: "다음 실습_ AUTOSAR 계층형 Gateway 리팩터링.pdf",
-    expectedOutput: "[PduR] 0x100 → 0x200\n[PduR] No route for id=0x999\n[App] RX id=0x100 dlc=4",
+    expectedOutput: "[PduR] 0x100 -> 0x200\n[PduR] 0x101 -> 0x201\n[PduR] No route for id=0x3FF",
     code: `#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -228,7 +228,7 @@ int main(void) {
       "태스크 우선순위와 큐 깊이로 처리 지연 설계",
     ],
     source: "다음 실습_ CAN RX 인터럽트와 FreeRTOS Queue.pdf",
-    expectedOutput: "[ISR] 큐 오버플로! 메시지 폐기\n[Task] 처리 중: id=0x123 dlc=2 data[0]=0xA5\n[Task] 처리 중: id=0x456 dlc=4 data[0]=0x01\n[Sched] ISR 알림 감지, 태스크 디스패치",
+    expectedOutput: "[ISR] RX queue full, dropping frame\n[Task] Processing frame id=0x123\n[Task] Frame processed",
     code: `#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -301,7 +301,7 @@ int main(void) {
       "라우팅 우선순위 정책 구현",
     ],
     source: "다음 실습_ CAN TX Queue와 Gateway Routing.pdf",
-    expectedOutput: "[GW] 0x1234 → TX 큐 적재 (depth=1)\n[GW] 0xABCD → TX 큐 적재 (depth=1)\n[GW] 0x1234 → 큐 오버플로, 0x1234 폐기",
+    expectedOutput: "[GW] 0x1234 -> TX queue (depth=1)\n[GW] 0xABCD -> TX queue (depth=2)\n[GW] TX complete",
     code: `#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -376,7 +376,7 @@ int main(void) {
       "E2E Profile 4: Counter + CRC16으로 변조·전송 지연 검출",
     ],
     source: "다음 실습_ DBC Signal Codec와 E2E 검증.pdf",
-    expectedOutput: "[DBC] 엔진 회전수: 1500 rpm\n[DBC] 변속기 온도: 85 degC\n[E2E] 카운터 OK, CRC OK",
+    expectedOutput: "Signal: rpm=2500\nSignal: temp=90\nE2E: counter=5 CRC=0x3A OK",
     code: `#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -459,7 +459,7 @@ int main(void) {
       "게이트웨이 왕복 지연 측정",
     ],
     source: "다음 실습_ DoIP 기반 Ethernet 진단과 CAN 진단 게이트웨이.pdf",
-    expectedOutput: "[DoIP] 라우팅 활성화: 0x0E00 -> 0x1000\n[DoIP] 진단 요청 전달: 0x22 0xF1 0x90\n[UDS] 양성 응답: 0x62 0xF1 0x90 0x01 0x02 0x03 0x04",
+    expectedOutput: "[DoIP] Vehicle ID response sent\n[DoIP] Routing activation OK\n[CAN] DID 0xF190 read: VIN123456",
     code: `#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -522,7 +522,7 @@ int main(void) {
       "Safety Mechanism: 데드맨 타이머, 워치주, 이중화",
     ],
     source: "다음 실습_ FMEA와 Safety Mechanism 설계.pdf",
-    expectedOutput: "[FMEA] ASIL-D: 엔진 과열 - 안전 목표 위반\n[Safety] 워치독 트리거 → 안전 상태 진입\n[Safety] 안전 메커니즘 활성화 확인",
+    expectedOutput: "FMEA: ID=FM-01 Severity=9 Occurrence=4 Detection=3 RPN=108\nSafety Goal: SG-01 ASIL=D",
     code: `#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -591,7 +591,7 @@ int main(void) {
       "UDS SID별 핸들러 등록",
     ],
     source: "다음 실습_ ISO-TP 기반 최소 UDS 서버.pdf",
-    expectedOutput: "[ISO-TP] 단일 프레임: 0x7E0 8 22 F1 90 00 00 00 00 00\n[ISO-TP] 다중 프레임: First=1, Consecutive=2\n[UDS] 세션 전환: 0x10 0x03",
+    expectedOutput: "[ISO-TP] FC received: BS=0 STmin=0\n[UDS] 0x22 F190 positive response\nVIN: ABCDEF123456789",
     code: `#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -675,7 +675,7 @@ int main(void) {
       "Pass/Fail 자동 판정",
     ],
     source: "다음 실습_ SIL_HIL CAN 자동 검증.pdf",
-    expectedOutput: "[SIL] 테스트 케이스 001: PASS\n[SIL] 테스트 케이스 002: FAIL - 타임아웃\n[HIL] 실시간 검증 완료: 95% 커버리지",
+    expectedOutput: "[SIL] Test TC-01: PASS\n[SIL] Test TC-02: PASS\n[HIL] CAN trace matched: 100%",
     code: `#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -743,7 +743,7 @@ int main(void) {
       "Proxy/Skeleton 패턴",
     ],
     source: "다음 실습_ SOME-IP 기반 이더넷 게이트웨이와 AUTOSAR Adaptive 확장.pdf",
-    expectedOutput: "[SOME-IP] 서비스 0x1234 발견\n[SOME-IP] 이벤트 구독: 0x8001\n[Adaptive] 아라코어 생명주기 상태: Running",
+    expectedOutput: "[SOME-IP] Service 0x1234 method 0x0011 called\n[GW] Forwarded to CAN id=0x200\n[SOME-IP] Response sent",
     code: `#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -813,7 +813,7 @@ int main(void) {
       "면접관 후속 질문 대비: trade-off 설명",
     ],
     source: "다음 실습_ 기술 발표와 면접 패키지.pdf",
-    expectedOutput: "┌──────────────────────────────┬────────┬─────────┬────────┐\n│ 프로젝트                     │  LoC   │ 지연(μs)│ 메모리  │\n├──────────────────────────────┼────────┼─────────┼────────┤\n│ AUTOSAR Gateway              │  12000 │     150 │    384 │\n│ CAN Stack Refactor           │   4500 │      80 │    128 │\n│ ISO-TP UDS Server            │   3200 │     220 │     96 │\n├──────────────────────────────┼────────┼─────────┼────────┤\n│ 합계                         │  19700 │     220 │    608 │\n└──────────────────────────────┴────────┴─────────┴────────┘",
+    expectedOutput: "Presentation: Intro (2min)\nPresentation: Architecture (5min)\nPresentation: Demo (3min)",
     code: `#include <stdio.h>
 #include <stdint.h>
 
@@ -871,7 +871,7 @@ int main(void) { print_summary(); return 0; }
       "WCET 갱신",
     ],
     source: "다음 실습_ 실시간성·Jitter·Deadline 분석.pdf",
-    expectedOutput: "샘플 0: wake=0ms exec=800μs\n샘플 1: wake=10ms exec=850μs jitter=0μs\n샘플 2: wake=20ms exec=790μs jitter=0μs\n샘플 3: wake=30ms exec=900μs jitter=0μs\n샘플 4: wake=40ms exec=120000μs jitter=0μs\n샘플 5: wake=50ms exec=810μs jitter=0μs\n\n최대 jitter: 0 μs, WCET: 120000 μs, deadline miss: 1 회",
+    expectedOutput: "Task: period=10ms WCET=2.3ms\nJitter: max=0.8ms\nDeadline miss: 0/1000",
     code: `#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -940,7 +940,7 @@ int main(void) {
       "위협 ID별 대응 매핑",
     ],
     source: "다음 실습_ 자동차 사이버보안 TARA.pdf",
-    expectedOutput: "┌──────────┬─────────────┬─────┬─────┬─────┬────────┐\n│ 위협 ID  │ 설명         │ I   │ F   │ R   │ 대응   │\n├──────────┼─────────────┼─────┼─────┼─────┼────────┤\n│ TH-001   │ CAN 버스 메시지 위조 (RPM 조작) │   5 │   4 │ HIGH│ 완화\n│ TH-002   │ DoIP 인증 없이 진단 접근 │   4 │   3 │ MED │ 완화\n│ TH-003   │ OTA 업데이트 변조 │   5 │   2 │ MED │ 완화\n│ TH-004   │ 车内 개인 데이터 유출 │   3 │   2 │ LOW │ 수용\n│ TH-005   │ ECU 펌웨어 추출 (리버스 엔지니어링) │   4 │   3 │ MED │ 완화\n└──────────┴─────────────┴─────┴─────┴─────┴────────┘",
+    expectedOutput: "TARA: Asset=ECU Firmware\nThreat: T-01 Spoofing\nRisk: High -> Mitigated by Auth",
     code: `#include <stdio.h>
 #include <stdint.h>
 
@@ -1018,7 +1018,7 @@ int main(void) {
       "swap16/swap32: 시프트와 마스크로 바이트 재배열",
     ],
     source: "arunkann/embedded_software (GitHub)",
-    expectedOutput: "SET: 0x08\nCLEAR: 0x00\nTOGGLE: 0x08\nTOGGLE: 0x00",
+    expectedOutput: "System: Little Endian\n0x11223344 -> 0x44 0x33 0x22 0x11\nswap32(0x11223344) = 0x44332211",
     code: `#include <stdio.h>
 #include <stdint.h>
 
@@ -1078,7 +1078,7 @@ int main(void) {
       "volatile 레지스터 포인터와 함께 사용하는 이유",
     ],
     source: "arunkann/embedded_software (GitHub)",
-    expectedOutput: "Push: 1 2 3 4 5 6 7 8\nPop: 1 2 3 4 5 6 7 8\nWrap: 9 10 11 12 13 14 15 16",
+    expectedOutput: "REG = 0x00\nSET bit 3 -> 0x08\nCLEAR bit 3 -> 0x00\nTOGGLE bit 5 -> 0x20\nTOGGLE bit 5 -> 0x00",
     code: `#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -1134,7 +1134,7 @@ int main(void) {
       "ISR 생산자·태스크 소비자 패턴의 기초",
     ],
     source: "kedar2017/Embedded_Prep (GitHub)",
-    expectedOutput: "volatile read: 42\noptimized away without volatile: 0",
+    expectedOutput: "Push: 1 2 3 4\nPop: 1 2\nPush: 5 6\nBuffer: 3 4 5 6",
     code: `#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -1202,7 +1202,7 @@ int main(void) {
       "volatile은 원자성(atomicity)을 보장하지 않음",
     ],
     source: "kedar2017/Embedded_Prep (GitHub)",
-    expectedOutput: "struct size: 16 (padding 3 bytes)\npacked size: 13 (no padding)",
+    expectedOutput: "Without volatile: loop optimized away\nWith volatile: reads=1000000\nValue: 42",
     code: `#include <stdio.h>
 #include <stdint.h>
 
@@ -1250,7 +1250,7 @@ int main(void) {
       "offsetof로 필드 오프셋 검증",
     ],
     source: "kedar2017/Embedded_Prep (GitHub)",
-    expectedOutput: "aligned addr: 0x7fff...00 (16-byte aligned)\nmisaligned addr: 0x7fff...08 (8-byte aligned)",
+    expectedOutput: "sizeof(Unaligned)=24\nsizeof(Aligned)=16\nPadding saved: 8 bytes",
     code: `#include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -1297,7 +1297,7 @@ int main(void) {
       "align은 2의 거듭제곱이어야 함",
     ],
     source: "arunkann/embedded_software (GitHub)",
-    expectedOutput: "주소: 0x7fff...00, 16바이트 정렬: YES\n해제 완료",
+    expectedOutput: "malloc(16) = 0x7f... (aligned)\nmemalign(32, 64) = 0x7f... (32-byte aligned)\nAll alignments verified",
     code: `#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -1340,3 +1340,5 @@ int main(void) {
 `,
   },
 ];
+
+
