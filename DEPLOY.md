@@ -24,7 +24,23 @@ docker compose exec app npx drizzle-kit push
 - Shiro/TCC 캐시 워밍
 - JSON 백업/복원으로 진행도 보존
 
-## 6. 보안 권장
+## 6. 도메인 / HTTPS
+```bash
+# .env
+DOMAIN=your-domain.com
+```
+
+Caddy는 자동 HTTPS를 제공합니다.
+```bash
+docker compose up -d --build
+```
+
+접속:
+- `https://your-domain.com`
+
+Nginx를 직접 사용하려면 `deploy/nginx.conf`를 참고하세요.
+
+## 7. 보안 권장
 - PostgreSQL 비밀번호 변경
 - 방화벽에서 5432 직접 노출 제거
 - Reverse proxy (Nginx/Caddy) + HTTPS 적용
