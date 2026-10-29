@@ -1,4 +1,5 @@
 import { getLearnerId } from "@/lib/learner";
+import StandaloneRoutineChecklist from "@/components/StandaloneRoutineChecklist";
 
 export const metadata = { title: "독립 실행 가이드 — EMBED:C LAB" };
 
@@ -112,6 +113,7 @@ clang -Wall -Wextra -std=c11 -O0 main.c -o main
           <li>새 태블릿/브라우저에서는 <b>JSON 복원</b>으로 이어서 사용할 수 있습니다.</li>
         </ul>
       </section>
+      <StandaloneRoutineChecklist />
     </div>
   );
 }
