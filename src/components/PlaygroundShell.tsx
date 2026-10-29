@@ -14,6 +14,11 @@ import {
   PRACTICE_TOPICS,
   TOPIC_COLOR,
 } from "@/data/practice";
+import {
+  getOfflineEntries,
+  saveOfflineEntry,
+  syncOfflineEntries,
+} from "@/lib/offlineStore";
 
 type RunResult = {
   ok: boolean;
@@ -84,6 +89,8 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [loadedExample, setLoadedExample] = useState<string>("");
+  const [offlineCompleted, setOfflineCompleted] = useState<string[]>([]);
+  const [offlineSyncMsg, setOfflineSyncMsg] = useState<string | null>(null);
 
   const outputRef = useRef<HTMLDivElement>(null);
   const hydrated = useRef(false);
@@ -143,6 +150,40 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
     refreshSnippets();
   }, [refreshSnippets]);
 
+  // 오프라인 완료 기록 로드 + 서버 동기화
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const rows = await getOfflineEntries();
+        setOfflineCompleted(rows.map((r) => r.id));
+        const online = typeof navigator !== "undefined" ? navigator.onLine : true;
+        if (online) {
+          const res = await syncOfflineEntries();
+          if (res.synced > 0) setOfflineSyncMsg(`${res.synced}건 동기화 완료`);
+          const rows2 = await getOfflineEntries();
+          setOfflineCompleted(rows2.map((r) => r.id));
+        }
+      } catch {
+        /* IndexedDB 미지원 */
+      }
+    };
+    load();
+  }, []);
+
+  // 브라우저 C IDE -> 연습장 코드/stdin 수신
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ code?: string; stdin?: string }>).detail;
+      if (detail && typeof detail.code === "string") {
+        setCode(detail.code);
+        if (typeof detail.stdin === "string") setStdin(detail.stdin);
+        setResult(null);
+      }
+    };
+    window.addEventListener("embedc:playground-code", handler);
+    return () => window.removeEventListener("embedc:playground-code", handler);
+  }, []);
+
   const run = async () => {
     if (running) return;
     setRunning(true);
@@ -157,15 +198,30 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
       if (!res.ok) throw new Error("HTTP " + res.status);
       const data = (await res.json()) as RunResult & { expectedOutput?: string };
       setResult(data);
-      // Practice completion tracking: if PASS and has profile, record completion
-      if (data.stage === "run" && data.ok && data.stdout && hasProfile) {
+      // Practice completion tracking: offline-first, server sync attempted
+      if (data.stage === "run" && data.ok && data.stdout) {
         const loadedPrac = PRACTICES.find((p) => p.id === loadedExample);
         if (loadedPrac) {
-          await fetch("/api/practice/complete", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ practiceId: loadedPrac.id }),
-          });
+          await saveOfflineEntry(loadedPrac.id, "practice");
+          setOfflineCompleted((prev) =>
+            prev.includes(loadedPrac.id) ? prev : [...prev, loadedPrac.id]
+          );
+          if (hasProfile) {
+            try {
+              const res = await fetch("/api/practice/complete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ practiceId: loadedPrac.id }),
+              });
+              if (res.ok) {
+                const rows = await getOfflineEntries();
+                // mark locally synced copy by refreshing offline list
+                setOfflineCompleted(rows.map((r) => r.id));
+              }
+            } catch {
+              setOfflineSyncMsg("오프라인에 저장됨 — 연결 복귀 후 동기화");
+            }
+          }
         }
       }
       requestAnimationFrame(() => {
@@ -222,6 +278,83 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
     refreshSnippets();
   };
 
+  const backupRef = useRef<HTMLInputElement>(null);
+
+  const backupProgress = async () => {
+    try {
+      const snapshot = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        progress: await getOfflineEntries(),
+        editor: { code, stdin, std, opt, werror, name: snippetName },
+      };
+      const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "embedc-backup.json";
+      a.click();
+      URL.revokeObjectURL(url);
+      setOfflineSyncMsg("JSON 백업 생성됨");
+    } catch {
+      setOfflineSyncMsg("백업 실패");
+    }
+  };
+
+  const restoreProgress = async (file: File) => {
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text) as {
+        progress?: Array<{ id: string; kind?: "practice" | "example" }>;
+        editor?: {
+          code?: string;
+          stdin?: string;
+          std?: string;
+          opt?: string;
+          werror?: boolean;
+          name?: string;
+        };
+      };
+      if (Array.isArray(data.progress)) {
+        for (const entry of data.progress) {
+          if (entry?.id) await saveOfflineEntry(entry.id, entry.kind ?? "practice");
+        }
+      }
+      if (data.editor) {
+        const e = data.editor;
+        if (typeof e.code === "string") {
+          setCode(e.code);
+          localStorage.setItem(LS.code, e.code);
+        }
+        if (typeof e.stdin === "string") {
+          setStdin(e.stdin);
+          localStorage.setItem(LS.stdin, e.stdin);
+        }
+        if (e.std) {
+          setStd(e.std);
+          localStorage.setItem(LS.std, e.std);
+        }
+        if (e.opt) {
+          setOpt(e.opt);
+          localStorage.setItem(LS.opt, e.opt);
+        }
+        if (typeof e.werror === "boolean") {
+          setWerror(e.werror);
+          localStorage.setItem(LS.werror, e.werror ? "1" : "0");
+        }
+        if (e.name) {
+          setSnippetName(e.name);
+          localStorage.setItem(LS.name, e.name);
+        }
+      }
+      const rows = await getOfflineEntries();
+      setOfflineCompleted(rows.map((r) => r.id));
+      setOfflineSyncMsg("복원 완료");
+    } catch {
+      setOfflineSyncMsg("복원 실패");
+    }
+  };
+
   const loadExample = (id: string) => {
     setLoadedExample(id);
     const ex = EXAMPLES.find((e) => e.id === id);
@@ -233,6 +366,7 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
       setSnippetName(p.title.replace(/^\d+\s·\s/, ""));
       setActiveSnippetId(null);
       setResult(null);
+      window.dispatchEvent(new CustomEvent("embedc:ide-code", { detail: { code: p.code, stdin: p.stdin ?? "" } }));
       return;
     }
     setCode(ex.code);
@@ -240,6 +374,7 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
     setSnippetName(ex.title.replace(/^\d+\s·\s/, ""));
     setActiveSnippetId(null);
     setResult(null);
+    window.dispatchEvent(new CustomEvent("embedc:ide-code", { detail: { code: ex.code, stdin: ex.stdin ?? "" } }));
   };
 
   return (
@@ -323,6 +458,13 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
             ) : (
               <>▶ 실행</>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("embedc:ide-code", { detail: { code, stdin } }))}            className="rounded-md border border-line bg-canvas px-3 py-1.5 text-xs font-semibold text-mute hover:text-ink"
+            title="현재 코드를 브라우저 C IDE로 전송"
+          >
+            IDE로 전송
           </button>
         </div>
 
@@ -533,6 +675,52 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
               지금은 브라우저 자동 저장(로컬)으로 유지됩니다.
             </p>
           )}
+        </div>
+
+        {/* 오프라인 진행도 */}
+        <div className="rounded-lg border border-line bg-panel p-3.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-dim">
+              오프라인 진행도
+            </span>
+            <span className="rounded bg-pine/15 px-1.5 py-px font-mono text-[10px] text-pine">
+              {offlineCompleted.length}건
+            </span>
+          </div>
+          {offlineSyncMsg ? (
+            <p className="mt-2 text-[11px] text-mute">{offlineSyncMsg}</p>
+          ) : (
+            <p className="mt-2 text-[11px] text-dim">
+              연결 복귀 시 자동 동기화됩니다.
+            </p>
+          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={backupProgress}
+              className="rounded-md border border-line bg-canvas px-2.5 py-1.5 text-[11px] font-semibold text-mute hover:text-ink"
+            >
+              JSON 백업
+            </button>
+            <button
+              type="button"
+              onClick={() => backupRef.current?.click()}
+              className="rounded-md border border-line bg-canvas px-2.5 py-1.5 text-[11px] font-semibold text-mute hover:text-ink"
+            >
+              JSON 복원
+            </button>
+            <input
+              ref={backupRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) restoreProgress(f);
+                e.target.value = "";
+              }}
+            />
+          </div>
         </div>
 
         {/* 환경 정보 */}

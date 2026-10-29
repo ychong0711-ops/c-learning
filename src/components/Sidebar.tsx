@@ -11,6 +11,8 @@ const NAV = [
   { href: "/quiz", label: "실전 퀴즈", hint: "30문제 채점" },
   { href: "/projects", label: "프로젝트 로드맵", hint: "포트폴리오" },
   { href: "/glossary", label: "용어 사전", hint: "임베디드 용어" },
+  { href: "/standalone", label: "독립 실행", hint: "PWA/Termux/iPad" },
+  { href: "/offline-check", label: "Smoke Check", hint: "오프라인 점검" },
 ];
 
 function ChipIcon() {
@@ -134,32 +136,75 @@ export default function Sidebar({
 
 export function MobileNav() {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <div className="sticky top-0 z-20 -mx-4 mb-6 border-b border-line bg-canvas/90 px-4 py-3 backdrop-blur sm:-mx-8 sm:px-8 lg:hidden">
-      <div className="mb-2 flex items-center gap-2 text-signal">
-        <ChipIcon />
-        <span className="font-display text-base font-bold tracking-tight text-ink">
-          EMBED:C <span className="text-signal">LAB</span>
-        </span>
-      </div>
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
-        {NAV.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`shrink-0 rounded-full border px-3 py-1 text-xs transition-colors ${
-              isActive(item.href)
-                ? "border-signal/60 bg-signal/10 text-signal"
-                : "border-line text-mute hover:text-ink"
-            }`}
+    <>
+      <div className="sticky top-0 z-20 -mx-4 mb-6 border-b border-line bg-canvas/90 px-4 py-3 backdrop-blur sm:-mx-8 sm:px-8 lg:hidden">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-signal">
+            <ChipIcon />
+            <span className="font-display text-base font-bold tracking-tight text-ink">
+              EMBED:C <span className="text-signal">LAB</span>
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="rounded-md border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-mute hover:text-ink"
+            aria-label="메뉴 열기"
           >
-            {item.label}
-          </Link>
-        ))}
+            ☰ 메뉴
+          </button>
+        </div>
       </div>
-    </div>
+
+      {open ? (
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/50"
+            aria-label="메뉴 닫기"
+            onClick={() => setOpen(false)}
+          />
+          <aside className="absolute left-0 top-0 h-full w-72 max-w-[80vw] overflow-y-auto border-r border-line bg-panel p-4 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-signal">
+                <ChipIcon />
+                <span className="font-display text-base font-bold tracking-tight text-ink">
+                  EMBED:C <span className="text-signal">LAB</span>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded-md border border-line px-2 py-1 text-xs text-mute hover:text-alarm"
+              >
+                ✕
+              </button>
+            </div>
+            <nav className="space-y-1">
+              {NAV.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                    isActive(item.href)
+                      ? "bg-raise text-ink"
+                      : "text-mute hover:bg-raise/60 hover:text-ink"
+                  }`}
+                >
+                  <span>{item.label}</span>
+                  <span className="text-[10px] text-dim">{item.hint}</span>
+                </Link>
+              ))}
+            </nav>
+          </aside>
+        </div>
+      ) : null}
+    </>
   );
 }

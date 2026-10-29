@@ -1,5 +1,7 @@
 # EMBED:C LAB — 자동차 임베디드 C 학습 플랫폼
 
+![Lighthouse PWA Audit](https://github.com/ychong0711-ops/c-learning/actions/workflows/lighthouse.yml/badge.svg)
+
 독일 자동차 임베디드 대학원 입학을 목표로 하는 C 언어 학습 플랫폼입니다.
 포인터·비트 조작·volatile·ISR·MISRA C·AUTOSAR까지, 임베디드 관점에서 C를 체계적으로 학습합니다.
 
@@ -88,6 +90,26 @@ powershell -ExecutionPolicy Bypass -File start-with-browser.ps1
 | `npm run typecheck` | TypeScript 타입 검사 (`tsc --noEmit`) |
 | `npm run test` | Vitest 테스트 실행 |
 | `npm run test:ui` | Vitest UI 모드 |
+
+## Lighthouse / PWA 자동 점검
+
+GitHub Actions에서 Lighthouse PWA audit를 자동 실행합니다.
+
+- 워크플로: `.github/workflows/lighthouse.yml`
+- 설정: `lighthouserc.json`
+- 대상 URL: `/`, `/standalone`, `/playground`, `/offline-check`
+- 기준 점수:
+  - PWA: `>= 0.9`
+  - Performance: `>= 0.7`
+  - Accessibility: `>= 0.8`
+  - Best Practices: `>= 0.8`
+
+로컬 실행:
+```bash
+npm run build
+npm run start
+npm run audit:lighthouse
+```
 
 ## 프로젝트 구조
 

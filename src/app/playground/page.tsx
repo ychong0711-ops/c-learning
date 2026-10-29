@@ -1,4 +1,5 @@
 import PlaygroundShell from "@/components/PlaygroundShell";
+import BrowserIdePanel from "@/components/BrowserIdePanel";
 import { getLearnerId } from "@/lib/learner";
 
 export const metadata = { title: "코딩 연습장 — EMBED:C LAB" };
@@ -25,6 +26,9 @@ export default async function PlaygroundPage() {
 
       <div className="mt-6">
         <PlaygroundShell hasProfile={learnerId !== null} />
+      </div>
+      <div className="mt-6">
+        <BrowserIdePanel />
       </div>
     </div>
   );

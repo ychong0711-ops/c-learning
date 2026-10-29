@@ -1,0 +1,19 @@
+{
+  "name": "EMBED:C LAB",
+  "short_name": "EMBED:C",
+  "description": "자동차 임베디드 C 학습 플랫폼 — 오프라인 강의/예제/퀴즈",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0d0f",
+  "theme_color": "#f0a13a",
+  "orientation": "any",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
