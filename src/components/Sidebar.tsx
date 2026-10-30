@@ -10,6 +10,7 @@ const NAV = [
   { href: "/playground", label: "코딩 연습장", hint: "gcc 실습" },
   { href: "/quiz", label: "실전 퀴즈", hint: "30문제 채점" },
   { href: "/daily", label: "오늘의 학습", hint: "10분 루틴" },
+  { href: "/interview", label: "면접 카드", hint: "Q&A" },
   { href: "/projects", label: "프로젝트 로드맵", hint: "포트폴리오" },
   { href: "/glossary", label: "용어 사전", hint: "임베디드 용어" },
   { href: "/standalone", label: "독립 실행", hint: "PWA/Termux/iPad" },
