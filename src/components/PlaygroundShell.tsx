@@ -15,10 +15,14 @@ import {
   TOPIC_COLOR,
 } from "@/data/practice";
 import {
+  clearWrongNotes,
   getOfflineEntries,
+  getWrongNotes,
   saveOfflineEntry,
+  saveWrongNote,
   syncOfflineEntries,
 } from "@/lib/offlineStore";
+import type { WrongNote } from "@/lib/offlineStore";
 
 type RunResult = {
   ok: boolean;
@@ -91,6 +95,7 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
   const [loadedExample, setLoadedExample] = useState<string>("");
   const [offlineCompleted, setOfflineCompleted] = useState<string[]>([]);
   const [offlineSyncMsg, setOfflineSyncMsg] = useState<string | null>(null);
+  const [wrongNotes, setWrongNotes] = useState<WrongNote[]>([]);
 
   const outputRef = useRef<HTMLDivElement>(null);
   const hydrated = useRef(false);
@@ -156,6 +161,8 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
       try {
         const rows = await getOfflineEntries();
         setOfflineCompleted(rows.map((r) => r.id));
+        const notes = await getWrongNotes();
+        setWrongNotes(notes);
         const online = typeof navigator !== "undefined" ? navigator.onLine : true;
         if (online) {
           const res = await syncOfflineEntries();
@@ -198,6 +205,30 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
       if (!res.ok) throw new Error("HTTP " + res.status);
       const data = (await res.json()) as RunResult & { expectedOutput?: string };
       setResult(data);
+
+      // 오답노트 자동 저장
+      const isCompileFail = data.stage === "compile" && !data.ok;
+      const isRunFail = data.stage === "run" && (!data.ok || data.timedOut || data.exitCode !== 0);
+      const isMismatch =
+        !!data.expectedOutput && (data.stdout?.trim() ?? "") !== data.expectedOutput.trim();
+      if (isCompileFail || isRunFail || isMismatch) {
+        const stage = isCompileFail
+          ? "compile"
+          : isMismatch
+            ? "mismatch"
+            : "run";
+        await saveWrongNote({
+          exampleId: loadedExample || undefined,
+          stage,
+          diagnostics: data.diagnostics,
+          stdout: data.stdout,
+          stderr: data.stderr,
+          expectedOutput: data.expectedOutput,
+          code,
+        });
+        setWrongNotes(await getWrongNotes());
+      }
+
       // Practice completion tracking: offline-first, server sync attempted
       if (data.stage === "run" && data.ok && data.stdout) {
         const loadedPrac = PRACTICES.find((p) => p.id === loadedExample);
@@ -721,6 +752,60 @@ export default function PlaygroundShell({ hasProfile }: { hasProfile: boolean })
               }}
             />
           </div>
+        </div>
+
+        {/* 오답노트 */}
+        <div className="rounded-lg border border-line bg-panel p-3.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-dim">
+              오답노트 ({wrongNotes.length})
+            </span>
+            {wrongNotes.length > 0 ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  await clearWrongNotes();
+                  setWrongNotes([]);
+                }}
+                className="text-[10px] text-mute hover:text-alarm"
+              >
+                비우기
+              </button>
+            ) : null}
+          </div>
+          {wrongNotes.length === 0 ? (
+            <p className="mt-2 text-[11px] text-dim">실패 기록이 없습니다.</p>
+          ) : (
+            <ul className="mt-2 max-h-48 space-y-2 overflow-y-auto">
+              {wrongNotes.slice(0, 8).map((n) => (
+                <li key={n.id} className="rounded border border-line bg-canvas/60 p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-[10px] text-alarm">{n.stage}</span>
+                    <span className="font-mono text-[9px] text-dim">
+                      {new Date(n.createdAt).toLocaleString("ko-KR", {
+                        month: "numeric",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "numeric",
+                      })}
+                    </span>
+                  </div>
+                  {n.exampleId ? (
+                    <p className="mt-1 text-[10px] text-mute">예제: {n.exampleId}</p>
+                  ) : null}
+                  {n.diagnostics ? (
+                    <pre className="mt-1 max-h-20 overflow-auto whitespace-pre-wrap font-mono text-[9px] text-mute">
+                      {n.diagnostics.slice(0, 240)}
+                    </pre>
+                  ) : n.expectedOutput ? (
+                    <p className="mt-1 text-[10px] text-mute">
+                      예상 출력과 다름 · 실제: {(n.stdout || "(없음)").slice(0, 80)}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* 환경 정보 */}

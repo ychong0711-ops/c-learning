@@ -6,8 +6,9 @@ export type OfflineEntry = {
 };
 
 const DB_NAME = "embedc-lab";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = "progress";
+const WRONG_STORE = "wrongnotes";
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -18,6 +19,10 @@ function openDb(): Promise<IDBDatabase> {
         const store = db.createObjectStore(STORE, { keyPath: "id" });
         store.createIndex("kind", "kind", { unique: false });
         store.createIndex("synced", "synced", { unique: false });
+      }
+      if (!db.objectStoreNames.contains(WRONG_STORE)) {
+        const store = db.createObjectStore(WRONG_STORE, { keyPath: "id" });
+        store.createIndex("createdAt", "createdAt", { unique: false });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -101,4 +106,60 @@ export async function syncOfflineEntries(): Promise<{ synced: number; failed: nu
     }
   }
   return { synced, failed };
+}
+
+export type WrongNote = {
+  id: string;
+  createdAt: string;
+  exampleId?: string;
+  stage: "compile" | "run" | "mismatch";
+  diagnostics?: string;
+  stdout?: string;
+  stderr?: string;
+  expectedOutput?: string;
+  code?: string;
+};
+
+export async function saveWrongNote(note: Omit<WrongNote, "id" | "createdAt">): Promise<void> {
+  if (typeof indexedDB === "undefined") return;
+  const db = await openDb();
+  const tx = db.transaction(WRONG_STORE, "readwrite");
+  const store = tx.objectStore(WRONG_STORE);
+  const entry: WrongNote = {
+    ...note,
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    createdAt: new Date().toISOString(),
+  };
+  store.put(entry);
+  await new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+export async function getWrongNotes(): Promise<WrongNote[]> {
+  if (typeof indexedDB === "undefined") return [];
+  const db = await openDb();
+  const tx = db.transaction(WRONG_STORE, "readonly");
+  const store = tx.objectStore(WRONG_STORE);
+  const req = store.getAll();
+  const rows = await new Promise<WrongNote[]>((resolve, reject) => {
+    req.onsuccess = () => resolve(req.result as WrongNote[]);
+    req.onerror = () => reject(req.error);
+  });
+  db.close();
+  return rows.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export async function clearWrongNotes(): Promise<void> {
+  if (typeof indexedDB === "undefined") return;
+  const db = await openDb();
+  const tx = db.transaction(WRONG_STORE, "readwrite");
+  tx.objectStore(WRONG_STORE).clear();
+  await new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
 }
