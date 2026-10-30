@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import PlaygroundShell from "@/components/PlaygroundShell";
 import BrowserIdePanel from "@/components/BrowserIdePanel";
 import { getLearnerId } from "@/lib/learner";
@@ -25,7 +26,9 @@ export default async function PlaygroundPage() {
       </p>
 
       <div className="mt-6">
-        <PlaygroundShell hasProfile={learnerId !== null} />
+        <Suspense fallback={<div className="py-8 text-center font-mono text-xs text-dim">로딩 중…</div>}>
+          <PlaygroundShell hasProfile={learnerId !== null} />
+        </Suspense>
       </div>
       <div className="mt-6">
         <BrowserIdePanel />
